@@ -1,13 +1,13 @@
-#include "jsmn.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "lexer.h"
+
 #define MAX_BUFFER 1024
 #define MAX_JSON_TOKENS 128
 
-inline static void scanner_load_code_from_file(const char *file_path,
-                                               char *buf) {
+inline static void load_code_from_file(const char *file_path, char *buf) {
   FILE *file = fopen(file_path, "rb");
 
   if (fseek(file, 0, SEEK_END) < 0) {
@@ -39,26 +39,19 @@ close:
     fclose(file);
 }
 
-void scanner_scan(const char *code, jsmntok_t *tokens) {
-  jsmn_parser parser;
-  jsmn_init(&parser);
-  jsmn_parse(&parser, code, strlen(code), tokens, MAX_JSON_TOKENS);
-}
-
 int main(int argc, char **argv) {
   if (argc != 2) {
-
-    fprintf(stderr, "USAGE: ./main <file_path>");
+    fprintf(stderr, "USAGE: ./main <file.c>");
     exit(1);
   }
 
-  char *file_path = argv[1];
+  char *code_path = argv[1];
 
   char code[MAX_BUFFER] = {0};
-  scanner_load_code_from_file(file_path, code);
+  load_code_from_file(code_path, code);
 
-  jsmntok_t tokens[MAX_JSON_TOKENS];
-  scanner_scan(code, tokens);
+  Token tokens[512] = {0};
+  lexer_lex(code, tokens);
 
-  jsmn_dump(tokens);
+  printf("Code: %s", code);
 }

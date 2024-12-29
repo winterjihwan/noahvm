@@ -3,6 +3,6 @@
 Level up from hopeless segfaults
 
 ```bash
-$ make noah
-$ ./noah
+$ make main
+$ ./main
 ```
