@@ -6,3 +6,7 @@ Level up from hopeless segfaults
 $ make main
 $ ./main
 ```
+
+(\(\
+( -.-)
+o\_(")(")

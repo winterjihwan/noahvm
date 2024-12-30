@@ -1,5 +1,5 @@
 CFLAGS=-Wall -Wextra -std=c11 -pedantic
-LIB =
+LIB = lexer.c
 
-main: main.c 
-	$(CC) $(CFLAGS) $(LIB) -o main main.c
+main: main.c lexer.c
+	$(CC) $(CFLAGS) $(LIB) -g -o main main.c
