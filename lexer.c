@@ -34,6 +34,8 @@ static int lexer_lex_keyword(void) {
     case 'n':
       lexer_lex_token(Token_Fn, 2);
       return 1;
+    default:
+      return 0;
     }
     return 0;
 
@@ -46,6 +48,8 @@ static int lexer_lex_keyword(void) {
     case 'n':
       lexer_lex_token(Token_Int, 3);
       return 1;
+    default:
+      return 0;
     }
 
   case 'w':
@@ -63,6 +67,8 @@ static int lexer_lex_keyword(void) {
   case 'r':
     lexer_lex_token(Token_Return, 6);
     return 1;
+  default:
+    return 0;
   }
   return 0;
 }
@@ -70,19 +76,20 @@ static int lexer_lex_keyword(void) {
 inline static int is_alphabet(int c) { return c >= 65 && c <= 122; }
 inline static int is_number(char c) { return c >= 48 && c <= 57; }
 
-inline static void lex_alphabet(void) {
-  int len = 0;
+inline static void lexer_lex_alphabet(void) {
+  int len = 1;
   char *p_code = lexer.code;
   p_code++;
 
   for (char c = *p_code; c != '\0' && is_alphabet(c); p_code++) {
+    printf("Lex alphabet: %c", c);
     len++;
   }
 
   lexer_lex_token(Token_Identifier, len);
 }
 
-inline static void lex_number(void) {
+inline static void lexer_lex_number(void) {
   int len = 1;
   char *p_code = lexer.code;
   p_code++;
@@ -98,10 +105,10 @@ static int lexer_lex_alphanumeric(void) {
   char c = *lexer.code;
 
   if (c == '_' || is_alphabet(c)) {
-    lex_alphabet();
+    lexer_lex_alphabet();
     return 1;
   } else if (is_number(c)) {
-    lex_number();
+    lexer_lex_number();
     return 1;
   }
 
@@ -113,6 +120,9 @@ inline static void lexer_trim_space(void) {
     const char c = *lexer.code;
     switch (c) {
     case ' ':
+      lexer.code++;
+      continue;
+    case '\n':
       lexer.code++;
       continue;
     case '\t':
@@ -131,7 +141,7 @@ void lexer_lex(void) {
     if (*code == '\0')
       break;
 
-    printf("C: %c\n", *code);
+    /*printf("C: %c\n", *code);*/
 
     if (lexer_lex_keyword()) {
       continue;
@@ -153,6 +163,12 @@ void lexer_lex(void) {
       continue;
     case ')':
       lexer_lex_token(Token_RParen, 1);
+      continue;
+    case '{':
+      lexer_lex_token(Token_LBrace, 1);
+      continue;
+    case '}':
+      lexer_lex_token(Token_RBrace, 1);
       continue;
     case '+':
       lexer_lex_token(Token_Plus, 1);
@@ -177,6 +193,12 @@ void lexer_lex(void) {
       continue;
     case '<':
       lexer_lex_token(Token_LT, 1);
+      continue;
+    case ';':
+      lexer_lex_token(Token_Semicolon, 1);
+      continue;
+    case ':':
+      lexer_lex_token(Token_Colon, 1);
       continue;
     default:
       fprintf(stderr, "ERROR: Unidentifiable character: %c\n", *code);
@@ -243,6 +265,10 @@ inline static char *lexer_token_t_to_str(Token_t type) {
     return "Token_Semicolon";
   case Token_Colon:
     return "Token_Colon";
+  case Token_LBrace:
+    return "Token_LBrace";
+  case Token_RBrace:
+    return "Token_RBrace";
   default:
     fprintf(stderr, "ERROR: Unidentifiable token type: %d\n", type);
     exit(2);

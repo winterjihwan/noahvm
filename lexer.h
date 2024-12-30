@@ -5,6 +5,8 @@ typedef enum {
   Token_Number,
   Token_LBracket,
   Token_RBracket,
+  Token_LBrace,
+  Token_RBrace,
   Token_Comma,
   Token_Fn,
   Token_Int,
