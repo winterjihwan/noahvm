@@ -28,7 +28,8 @@ typedef enum {
   Token_And,
   Token_Or,
   Token_Semicolon,
-  Token_Colon
+  Token_Colon,
+  Token_EOF
 } Token_t;
 
 typedef struct {

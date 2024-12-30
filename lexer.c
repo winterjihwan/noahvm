@@ -73,7 +73,9 @@ static int lexer_lex_keyword(void) {
   return 0;
 }
 
-inline static int is_alphabet(int c) { return c >= 65 && c <= 122; }
+inline static int is_alphabet(int c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
 inline static int is_number(char c) { return c >= 48 && c <= 57; }
 
 inline static void lexer_lex_alphabet(void) {
@@ -81,9 +83,15 @@ inline static void lexer_lex_alphabet(void) {
   char *p_code = lexer.code;
   p_code++;
 
-  for (char c = *p_code; c != '\0' && is_alphabet(c); p_code++) {
-    printf("Lex alphabet: %c", c);
+  while (1) {
+    char c = *p_code;
+
+    if (c == '\0' || !is_alphabet(c)) {
+      break;
+    }
+
     len++;
+    p_code++;
   }
 
   lexer_lex_token(Token_Identifier, len);
@@ -94,8 +102,15 @@ inline static void lexer_lex_number(void) {
   char *p_code = lexer.code;
   p_code++;
 
-  for (char c = *p_code; c != '\0' && is_number(c); p_code++) {
+  while (1) {
+    char c = *p_code;
+
+    if (c == '\0' || !is_number(c)) {
+      break;
+    }
+
     len++;
+    p_code++;
   }
 
   lexer_lex_token(Token_Number, len);
@@ -138,8 +153,10 @@ void lexer_lex(void) {
   while (1) {
     lexer_trim_space();
     const char *code = lexer.code;
-    if (*code == '\0')
+    if (*code == '\0') {
+      lexer_lex_token(Token_EOF, 0);
       break;
+    }
 
     /*printf("C: %c\n", *code);*/
 
@@ -269,6 +286,8 @@ inline static char *lexer_token_t_to_str(Token_t type) {
     return "Token_LBrace";
   case Token_RBrace:
     return "Token_RBrace";
+  case Token_EOF:
+    return "Token_EOF";
   default:
     fprintf(stderr, "ERROR: Unidentifiable token type: %d\n", type);
     exit(2);
