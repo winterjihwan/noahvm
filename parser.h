@@ -18,7 +18,8 @@ typedef void (*ParseFn)(void);
 
 typedef struct {
   Token_t op;
-  uint8_t power;
+  uint8_t pre_power;
+  uint8_t in_power;
   ParseFn fn;
 } Parser_bp;
 

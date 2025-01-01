@@ -41,6 +41,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "eof";
   case INST_PRINT:
     return "print";
+  case INST_NEGATE:
+    return "negate";
   default:
     __builtin_unreachable();
   }
@@ -111,6 +113,12 @@ void vm_execute(void) {
       word_one = vm.stack[vm.stack_count - 1];
       assert(word_one != 0);
       vm.stack[--vm.stack_count - 1] /= word_one;
+      continue;
+
+    case INST_NEGATE:
+      assert(vm.stack_count > 0);
+
+      vm.stack[vm.stack_count - 1] = -vm.stack[vm.stack_count - 1];
       continue;
 
     case INST_EOF:

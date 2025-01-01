@@ -13,8 +13,9 @@ typedef enum {
   INST_MINUS,
   INST_MULT,
   INST_DIV,
-  INST_EOF,
-  INST_PRINT
+  INST_PRINT,
+  INST_NEGATE,
+  INST_EOF
 } Inst_t;
 
 typedef struct {
@@ -44,6 +45,8 @@ typedef struct {
   (Inst) { .type = INST_MULT }
 #define MAKE_DIV                                                               \
   (Inst) { .type = INST_DIV }
+#define MAKE_NEGATE                                                            \
+  (Inst) { .type = INST_NEGATE }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }
 

@@ -190,7 +190,7 @@ void lexer_lex(void) {
       lexer_lex_token(Token_Plus, 1);
       continue;
     case '-':
-      lexer_lex_token(Token_Plus, 1);
+      lexer_lex_token(Token_Minus, 1);
       continue;
     case '*':
       lexer_lex_token(Token_Mult, 1);
