@@ -4,7 +4,6 @@
 
 #include "lexer.h"
 
-static size_t token_count = 0;
 Lexer lexer = {0};
 
 inline static void lexer_code_advance(const int n) {
@@ -14,7 +13,7 @@ inline static void lexer_code_advance(const int n) {
 }
 
 inline static void lexer_lex_token(const Token_t token_type, const int len) {
-  lexer.tokens[token_count++] =
+  lexer.tokens[lexer.tokens_count++] =
       (Token){.type = token_type, .start = lexer.code, .len = len};
   lexer_code_advance(len);
 }
@@ -295,7 +294,7 @@ char *lexer_token_t_to_str(const Token_t type) {
 }
 
 void lexer_tokens_dump(Token *const tokens) {
-  for (size_t i = 0; i < token_count; i++) {
+  for (size_t i = 0; i < lexer.tokens_count; i++) {
     Token *token = &tokens[i];
     printf("Type: %s\n", lexer_token_t_to_str(token->type));
     printf("Len: %d\n", token->len);

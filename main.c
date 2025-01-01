@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "lexer.h"
+#include "parser.h"
 
 #define CODE_CAP 1024
 
@@ -60,4 +61,8 @@ int main(int argc, char **argv) {
   lexer_init_code(code);
   lexer_lex();
   lexer_tokens_dump(lexer.tokens);
+
+  parser_init();
+  parser_load_tokens(lexer.tokens, lexer.tokens_count);
+  parser_parse();
 }

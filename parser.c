@@ -10,16 +10,25 @@
 
 // Resolve to AST
 
-Parser parser;
+Parser parser = {0};
 
-void parser_load_tokens(Token *tokens, size_t tokens_count) {
-  parser.tokens = tokens, parser.tokens_count = tokens_count;
+void parser_init(void) {
+  parser.tokens_pos = 0;
+  parser.insts_count = 0;
 }
 
-inline static void parser_expr_print() {
-  parser.insts[parser.inst_count++] = (Inst){
+void parser_load_tokens(Token *tokens, size_t tokens_count) {
+  for (size_t i = 0; i < tokens_count; i++) {
+    parser.tokens[i] = tokens[i];
+  }
+}
+
+inline static void parser_expr_print(void) {
+  parser.insts[parser.insts_count++] = (Inst){
       .type = INST_PRINT,
   };
+
+  parser.insts_count = 0;
 }
 
 #define PRATT_TABLE_CAP 16
@@ -42,40 +51,52 @@ inline static uint8_t parser_bp_get(Token_t type) {
   exit(4);
 }
 
-// 1 + 2 * 3 + 4
-static void parser_expr_bp(Token *lhs, uint8_t min_bp) {
-#define NEXT_TOKEN &parser.tokens[parser.tokens_count++]
+#define NEXT_TOKEN &parser.tokens[parser.tokens_pos++]
+#define PEEK_TOKEN &parser.tokens[parser.tokens_pos]
+#define PUSH_INST(inst)                                                        \
+  do {                                                                         \
+    parser.insts[parser.insts_count++] = inst;                                 \
+  } while (0)
+
+static void parser_expr_bp(uint8_t min_bp) {
+  Token *lhs = NEXT_TOKEN;
+
+  // Push number
+  const Inst inst = (Inst){.type = INST_PUSH, .operand = lhs->len};
+  PUSH_INST(inst);
 
   while (1) {
-    Token *op = NEXT_TOKEN;
+    Token *op = PEEK_TOKEN;
 
     if (op->type == Token_EOF)
       break;
 
     uint8_t bp = parser_bp_get(op->type);
     if (bp < min_bp) {
-      printf("Op: %s", lexer_token_t_to_str(op->type));
       break;
     }
 
-    printf("%.*s", lhs->len, lhs->start);
+    parser.tokens_pos++;
+    parser_expr_bp(bp);
 
-    parser_expr_bp(lhs, bp);
+    // Push op
+    const Inst inst = (Inst){.type = INST_PUSH, .operand = lhs->len};
+    PUSH_INST(inst);
   }
-
-#undef NEXT
 }
 
-static void parser_expr() {
-  Token *token = NEXT_TOKEN;
+static void parser_expr(void) {
+
+  Token *token = PEEK_TOKEN;
 
   if (token->type == Token_Print) {
     parser_expr_print();
   } else if (token->type == Token_Number) {
-    parser_expr_bp(token, 0);
+    parser_expr_bp(0);
   }
 }
 
-void parser_parse() { parser_expr(); }
+#undef PEEK_TOKEN
+#undef NEXT_TOKEN
 
-int main(void) {}
+void parser_parse(void) { parser_expr(); }

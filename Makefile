@@ -6,6 +6,3 @@ main: main.c lexer.c parser.c
 
 vm: vm.c
 	$(CC) $(CFLAGS) -g -o vm vm.c
-
-ps: parser.c lexer.c vm.c
-	$(CC) $(CFLAGS) $(LIB) -g -o ps parser.c

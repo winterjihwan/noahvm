@@ -1,6 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#include <stddef.h>
 typedef enum {
   Token_LParen,
   Token_RParen,
@@ -46,6 +47,7 @@ typedef struct {
 typedef struct {
   char *code;
   Token tokens[TOKENS_CAP];
+  size_t tokens_count;
 } Lexer;
 
 void lexer_lex(void);
