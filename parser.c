@@ -51,6 +51,28 @@ inline static uint8_t parser_bp_get(Token_t type) {
   exit(4);
 }
 
+inline static Inst parser_translate_op(Token_t type) {
+  switch (type) {
+  case Token_Plus:
+    return MAKE_PLUS;
+  case Token_Minus:
+    return MAKE_MINUS;
+  case Token_Mult:
+    return MAKE_MULT;
+  case Token_Div:
+    return MAKE_DIV;
+  default:
+    fprintf(stderr, "Expected op");
+    exit(5);
+  };
+}
+
+inline static int parser_str_view_to_num(char *str, int len) {
+  char buf[len + 1];
+  snprintf(buf, len + 1, "%.*s", len, str);
+  return strtol(buf, NULL, 10);
+}
+
 #define NEXT_TOKEN &parser.tokens[parser.tokens_pos++]
 #define PEEK_TOKEN &parser.tokens[parser.tokens_pos]
 #define PUSH_INST(inst)                                                        \
@@ -61,9 +83,7 @@ inline static uint8_t parser_bp_get(Token_t type) {
 static void parser_expr_bp(uint8_t min_bp) {
   Token *lhs = NEXT_TOKEN;
 
-  // Push number
-  const Inst inst = (Inst){.type = INST_PUSH, .operand = lhs->len};
-  PUSH_INST(inst);
+  PUSH_INST(MAKE_PUSH(parser_str_view_to_num(lhs->start, lhs->len)));
 
   while (1) {
     Token *op = PEEK_TOKEN;
@@ -79,9 +99,7 @@ static void parser_expr_bp(uint8_t min_bp) {
     parser.tokens_pos++;
     parser_expr_bp(bp);
 
-    // Push op
-    const Inst inst = (Inst){.type = INST_PUSH, .operand = lhs->len};
-    PUSH_INST(inst);
+    PUSH_INST(parser_translate_op(op->type));
   }
 }
 
@@ -99,4 +117,7 @@ static void parser_expr(void) {
 #undef PEEK_TOKEN
 #undef NEXT_TOKEN
 
-void parser_parse(void) { parser_expr(); }
+void parser_parse(void) {
+  parser_expr();
+  PUSH_INST(MAKE_EOF);
+}

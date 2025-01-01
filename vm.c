@@ -9,6 +9,7 @@ static Vm vm = {0};
 void vm_init(void) {
   vm.ip = 0;
   vm.stack_count = 0;
+  vm.program_size = 0;
 }
 
 void vm_program_load_from_memory(Inst *insts, size_t insts_count) {
@@ -18,10 +19,11 @@ void vm_program_load_from_memory(Inst *insts, size_t insts_count) {
     vm.program[vm.ip++] = insts[i];
   }
 
+  vm.program_size = vm.ip;
   vm.ip = 0;
 }
 
-inline static char *vm_inst_t_to_str(Inst_t type) {
+char *vm_inst_t_to_str(Inst_t type) {
   switch (type) {
   case INST_PUSH:
     return "push";
@@ -29,6 +31,12 @@ inline static char *vm_inst_t_to_str(Inst_t type) {
     return "pop";
   case INST_PLUS:
     return "plus";
+  case INST_MINUS:
+    return "minus";
+  case INST_MULT:
+    return "mult";
+  case INST_DIV:
+    return "div";
   case INST_EOF:
     return "eof";
   case INST_PRINT:
@@ -38,12 +46,21 @@ inline static char *vm_inst_t_to_str(Inst_t type) {
   }
 }
 
-static void vm_dump(void) {
+void vm_stack_dump(void) {
   printf("Stack: \n");
   for (size_t i = 0; i < (size_t)vm.stack_count; i++) {
     printf("\t%zu: %lld\n", i, vm.stack[i]);
   }
-  printf("-----\n");
+  printf("-----\n\n");
+}
+
+void vm_program_dump(void) {
+  printf("Program: \n");
+  for (size_t i = 0; i < (size_t)vm.program_size; i++) {
+    Inst *inst = &vm.program[i];
+    printf("%s %lld\n", vm_inst_t_to_str(inst->type), inst->operand);
+  }
+  printf("-----\n\n");
 }
 
 // Temporary implementation of vm interpreter
@@ -52,6 +69,7 @@ static void vm_dump(void) {
 void vm_execute(void) {
   while (1) {
     const Inst inst = vm.program[vm.ip++];
+    Word word_one;
 
     switch (inst.type) {
     case INST_PUSH:
@@ -64,12 +82,36 @@ void vm_execute(void) {
       assert(vm.stack_count > 0);
 
       vm.stack_count--;
+      continue;
 
     case INST_PLUS:
       assert(vm.stack_count > 1);
 
-      Word word_one = vm.stack[vm.stack_count - 1];
+      word_one = vm.stack[vm.stack_count - 1];
       vm.stack[--vm.stack_count - 1] += word_one;
+      continue;
+
+    case INST_MINUS:
+      assert(vm.stack_count > 1);
+
+      word_one = vm.stack[vm.stack_count - 1];
+      vm.stack[--vm.stack_count - 1] -= word_one;
+      continue;
+
+    case INST_MULT:
+      assert(vm.stack_count > 1);
+
+      word_one = vm.stack[vm.stack_count - 1];
+      vm.stack[--vm.stack_count - 1] *= word_one;
+      continue;
+
+    case INST_DIV:
+      assert(vm.stack_count > 1);
+
+      word_one = vm.stack[vm.stack_count - 1];
+      assert(word_one != 0);
+      vm.stack[--vm.stack_count - 1] /= word_one;
+      continue;
 
     case INST_EOF:
       return;
@@ -78,17 +120,4 @@ void vm_execute(void) {
       __builtin_unreachable();
     }
   }
-}
-
-int main(void) {
-  vm_init();
-
-  Inst insts[5] = {(Inst){.type = INST_PUSH, .operand = 2},
-                   (Inst){.type = INST_PUSH, .operand = 3},
-                   (Inst){.type = INST_PLUS}, (Inst){.type = INST_EOF}};
-
-  vm_program_load_from_memory(insts, 5);
-  vm_dump();
-  vm_execute();
-  vm_dump();
 }

@@ -4,6 +4,7 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "vm.h"
 
 #define CODE_CAP 1024
 
@@ -44,6 +45,7 @@ close:
 }
 
 extern Lexer lexer;
+extern Parser parser;
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -65,4 +67,10 @@ int main(int argc, char **argv) {
   parser_init();
   parser_load_tokens(lexer.tokens, lexer.tokens_count);
   parser_parse();
+
+  vm_program_load_from_memory(parser.insts, parser.insts_count);
+  vm_program_dump();
+  vm_stack_dump();
+  vm_execute();
+  vm_stack_dump();
 }
