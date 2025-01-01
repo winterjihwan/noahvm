@@ -1,3 +1,6 @@
+#ifndef LEXER_H
+#define LEXER_H
+
 typedef enum {
   Token_LParen,
   Token_RParen,
@@ -38,13 +41,15 @@ typedef struct {
   int len;
 } Token;
 
-#define MAX_TOKENS 512
+#define TOKENS_CAP 512
 
 typedef struct {
   char *code;
-  Token tokens[MAX_TOKENS];
+  Token tokens[TOKENS_CAP];
 } Lexer;
 
 void lexer_lex(void);
 void lexer_init_code(char *code);
-void lexer_tokens_dump(Token *tokens);
+void lexer_tokens_dump(Token *const tokens);
+
+#endif

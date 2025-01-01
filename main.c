@@ -4,7 +4,7 @@
 
 #include "lexer.h"
 
-#define MAX_CODE 1024
+#define CODE_CAP 1024
 
 inline static void null_terminate(char *str) { str[strlen(str) - 1] = '\0'; }
 
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
 
   char *code_path = argv[1];
 
-  char code[MAX_CODE] = {0};
+  char code[CODE_CAP] = {0};
   load_code_from_file(code_path, code);
 
   printf("Code: %s\n", code);
