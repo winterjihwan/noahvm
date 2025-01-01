@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Wextra -std=c11 -pedantic -Wmissing-prototypes
+CFLAGS=-Wall -Wextra -std=c11 -pedantic -Wmissing-prototypes -Wswitch-enum
 LIB = lexer.c parser.c
 
 main: main.c lexer.c parser.c
