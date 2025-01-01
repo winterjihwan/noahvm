@@ -224,7 +224,7 @@ void lexer_lex(void) {
   }
 }
 
-inline static char *lexer_token_t_to_str(const Token_t type) {
+char *lexer_token_t_to_str(const Token_t type) {
   switch (type) {
   case Token_LParen:
     return "Token_LParen";
@@ -290,7 +290,7 @@ inline static char *lexer_token_t_to_str(const Token_t type) {
     return "Token_EOF";
   default:
     fprintf(stderr, "ERROR: Unidentifiable token type: %d\n", type);
-    exit(2);
+    exit(3);
   }
 }
 

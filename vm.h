@@ -6,7 +6,7 @@
 
 typedef int64_t Word;
 
-typedef enum { INST_PUSH, INST_POP, INST_PLUS, INST_EOF } Inst_t;
+typedef enum { INST_PUSH, INST_POP, INST_PLUS, INST_EOF, INST_PRINT } Inst_t;
 
 typedef struct {
   Inst_t type;

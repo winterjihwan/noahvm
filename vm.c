@@ -1,7 +1,8 @@
-#include "vm.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+
+#include "vm.h"
 
 static Vm vm = {0};
 
@@ -30,6 +31,8 @@ inline static char *vm_inst_t_to_str(Inst_t type) {
     return "plus";
   case INST_EOF:
     return "eof";
+  case INST_PRINT:
+    return "print";
   default:
     __builtin_unreachable();
   }

@@ -51,5 +51,6 @@ typedef struct {
 void lexer_lex(void);
 void lexer_init_code(char *code);
 void lexer_tokens_dump(Token *const tokens);
+char *lexer_token_t_to_str(const Token_t type);
 
 #endif
