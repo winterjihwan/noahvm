@@ -20,6 +20,6 @@ typedef struct {
 
 HashTable hash_table_new(void);
 void hash_table_insert(HashTable *ht, const char *key_str, void *const data);
-void *hash_table_get(HashTable *ht, const char *key_str);
+void **hash_table_get(HashTable *ht, const char *key_str);
 
 #endif
