@@ -10,6 +10,8 @@
 
 inline static void null_terminate(char *str) { str[strlen(str) - 1] = '\0'; }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
 static void load_code_from_file(const char *file_path, char *buf) {
   FILE *file = fopen(file_path, "rb");
 
@@ -43,6 +45,7 @@ close:
   if (file)
     fclose(file);
 }
+#pragma clang diagnostic pop
 
 extern Lexer lexer;
 extern Compiler compiler;
@@ -51,11 +54,8 @@ extern Vm vm;
 int main(void) {
 #define INST_COUNT 5
 
-  Word label_a = (Word){.as_str = "a"};
-
   Inst program[INST_COUNT] = {
-      MAKE_PUSH(3), MAKE_PUSH(3), MAKE_PLUS, MAKE_ASSIGN((Word){.as_str = "a"}),
-      MAKE_EOF,
+      MAKE_PUSH(3), MAKE_PUSH(3), MAKE_PLUS, MAKE_ASSIGN("a"), MAKE_EOF,
   };
 
   vm_init();

@@ -50,6 +50,8 @@ void hash_table_insert(HashTable *ht, const char *key_str, void *const data) {
   }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
 static void hash_table_bucket_dump(Bucket *bucket) {
   printf("Bucket: \n");
   printf("\tkey: %lld\n", bucket->key);
@@ -62,6 +64,7 @@ static void hash_table_keys_dump(HashTable *ht) {
     printf("\t%lld\n", *ht->keys[i]);
   }
 }
+#pragma clang diagnostic pop
 
 void **hash_table_get(HashTable *ht, const char *key_str) {
   HashKey key = hash_table_key_hash(key_str);
@@ -92,6 +95,7 @@ int hash_table_keys_contains(HashTable *ht, char *key_str) {
 
   for (size_t i = 0; i < ht->keys_count; i++) {
     if (*ht->keys[i] == key) {
+      printf("contains key at index %zu", i);
       return 1;
     }
   }

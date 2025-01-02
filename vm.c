@@ -69,20 +69,6 @@ void vm_program_dump(void) {
   printf("-----\n\n");
 }
 
-inline static void vm_word_print(Word *word) {
-  printf("Word: \n");
-  printf("\tas_u64: %lld\n", word->as_u64);
-  printf("\tas_i64: %lld\n", word->as_i64);
-  printf("\tas_f64: %llu\n", word->as_u64);
-  // TODO: print %s
-  printf("\tas_str: %p\n", word->as_str);
-  printf("\tas_ptr: %p\n", word->as_ptr);
-}
-
-// Temporary implementation of vm interpreter
-//
-// Will further reform into assembly translator
-
 void vm_execute(void) {
   while (1) {
     const Inst inst = vm.program[vm.ip++];
@@ -141,7 +127,8 @@ void vm_execute(void) {
       assert(vm.stack_count > 0);
 
       char *label = inst.operand.as_str;
-      assert(hash_table_keys_contains(&vm.env, label) && "Redefinition of var");
+      assert(hash_table_keys_contains(&vm.env, label) == 0 &&
+             "Redefinition of var");
 
       word_one = vm.stack[vm.stack_count - 1];
       void *value = (void *)(&word_one);

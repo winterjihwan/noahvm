@@ -48,7 +48,9 @@ typedef struct {
 } Vm;
 
 #define MAKE_PUSH(val)                                                         \
-  (Inst) { .type = INST_PUSH, .operand = val }
+  (Inst) {                                                                     \
+    .type = INST_PUSH, .operand = {.as_u64 = val }                             \
+  }
 #define MAKE_PLUS                                                              \
   (Inst) { .type = INST_PLUS }
 #define MAKE_MINUS                                                             \
@@ -62,7 +64,9 @@ typedef struct {
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }
 #define MAKE_ASSIGN(label)                                                     \
-  (Inst) { .type = INST_ASSIGN, .operand = label }
+  (Inst) {                                                                     \
+    .type = INST_ASSIGN, .operand = {.as_str = label }                         \
+  }
 
 void vm_init(void);
 void vm_program_load_from_memory(Inst *insts, size_t insts_count);
