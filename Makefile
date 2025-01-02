@@ -7,3 +7,6 @@ main: main.c lexer.c parser.c vm.c
 
 vm: vm.c
 	$(CC) $(CFLAGS) -g -o vm vm.c
+
+table: table.c
+	$(CC) $(CFLAGS) -g -o table table.c
