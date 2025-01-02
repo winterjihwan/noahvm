@@ -43,37 +43,38 @@ inline static uint8_t parser_in_power_get(Token_t type) {
   for (size_t i = 0; i < PRATT_TABLE_CAP; i++) {
     if (type == parser_pratt_table[i].op) {
       uint8_t in_power = parser_pratt_table[i].in_power;
-      if (in_power == 0)
-        goto panic;
 
       return in_power;
     }
   }
 
-panic:
-  fprintf(stderr, "None binding power for op");
-  exit(4);
+  return 0;
 }
 
 inline static uint8_t parser_pre_power_get(Token_t type) {
   for (size_t i = 0; i < PRATT_TABLE_CAP; i++) {
     if (type == parser_pratt_table[i].op) {
       uint8_t pre_power = parser_pratt_table[i].pre_power;
-      if (pre_power == 0)
-        goto panic;
 
       return pre_power;
     }
   }
 
-panic:
-  fprintf(stderr, "None binding power for op");
-  exit(4);
+  return 0;
 }
 
-inline static int parser_token_is_op(Token_t type) {
-  if (type == Token_Plus || type == Token_Minus || type == Token_Mult ||
-      type == Token_Div)
+inline static int parser_token_is_pre_op(Token_t type) {
+  if (type == Token_Minus)
+    return 1;
+
+  return 0;
+}
+
+inline static int parser_token_ignore_emit(Token_t type) {
+  if (parser_token_is_pre_op(type))
+    return 1;
+
+  if (type == Token_LParen)
     return 1;
 
   return 0;
@@ -103,22 +104,39 @@ inline static int parser_str_view_to_num(char *str, int len) {
 
 #define NEXT_TOKEN &parser.tokens[parser.tokens_pos++]
 #define PEEK_TOKEN &parser.tokens[parser.tokens_pos]
+
 #define PUSH_INST(inst)                                                        \
   do {                                                                         \
     parser.insts[parser.insts_count++] = inst;                                 \
   } while (0)
 
+#define MUNCH_TOKEN(token_type)                                                \
+  do {                                                                         \
+    if (*PEEK_TOKEN.type == token_type) {                                      \
+      parser.tokens_pos++;                                                     \
+    } else {                                                                   \
+      fprintf(stderr, "Expected token type %s",                                \
+              lexer_token_t_to_str(token_type));                               \
+      exit(6);                                                                 \
+    }                                                                          \
+  } while (0)
+
 static void parser_expr_bp(uint8_t min_bp) {
   Token *lhs = NEXT_TOKEN;
-  int lhs_is_op = parser_token_is_op(lhs->type);
-  if (lhs_is_op) {
+
+  int lhs_is_pre_op = parser_token_is_pre_op(lhs->type);
+  if (lhs_is_pre_op) {
     uint8_t pre_bp = parser_pre_power_get(lhs->type);
     parser_expr_bp(pre_bp);
 
     PUSH_INST(MAKE_NEGATE);
+  } else if (lhs->type == Token_LParen) {
+    parser_expr_bp(0);
+
+    MUNCH_TOKEN(Token_RParen);
   }
 
-  if (!lhs_is_op)
+  if (!parser_token_ignore_emit(lhs->type))
     PUSH_INST(MAKE_PUSH(parser_str_view_to_num(lhs->start, lhs->len)));
 
   while (1) {
@@ -128,6 +146,10 @@ static void parser_expr_bp(uint8_t min_bp) {
       break;
 
     uint8_t in_bp = parser_in_power_get(op->type);
+
+    if (!in_bp)
+      break;
+
     if (in_bp < min_bp) {
       break;
     }
@@ -152,6 +174,7 @@ static void parser_expr(void) {
 
 #undef PEEK_TOKEN
 #undef NEXT_TOKEN
+#undef MUNCH_TOKEN
 
 void parser_parse(void) {
   parser_expr();
