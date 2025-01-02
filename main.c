@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "compiler.h"
 #include "lexer.h"
-#include "parser.h"
 #include "vm.h"
 
 #define CODE_CAP 1024
@@ -45,32 +45,53 @@ close:
 }
 
 extern Lexer lexer;
-extern Parser parser;
+extern Compiler compiler;
+extern Vm vm;
 
-int main(int argc, char **argv) {
-  if (argc != 2) {
-    fprintf(stderr, "USAGE: ./main <file.c>");
-    exit(1);
-  }
+int main(void) {
+#define INST_COUNT 5
 
-  char *code_path = argv[1];
+  Word label_a = (Word){.as_str = "a"};
 
-  char code[CODE_CAP] = {0};
-  load_code_from_file(code_path, code);
+  Inst program[INST_COUNT] = {
+      MAKE_PUSH(3), MAKE_PUSH(3), MAKE_PLUS, MAKE_ASSIGN((Word){.as_str = "a"}),
+      MAKE_EOF,
+  };
 
-  printf("Code: %s\n", code);
-
-  lexer_init_code(code);
-  lexer_lex();
-  lexer_tokens_dump(lexer.tokens);
-
-  parser_init();
-  parser_load_tokens(lexer.tokens, lexer.tokens_count);
-  parser_parse();
-
-  vm_program_load_from_memory(parser.insts, parser.insts_count);
+  vm_init();
+  vm_program_load_from_memory(program, INST_COUNT);
   vm_program_dump();
-  vm_stack_dump();
   vm_execute();
   vm_stack_dump();
+
+#undef INST_COUNT
 }
+
+/*int main_2(int argc, char **argv) {*/
+/*  if (argc != 2) {*/
+/*    fprintf(stderr, "USAGE: ./main <file.c>");*/
+/*    exit(1);*/
+/*  }*/
+/**/
+/*  char *code_path = argv[1];*/
+/**/
+/*  char code[CODE_CAP] = {0};*/
+/*  load_code_from_file(code_path, code);*/
+/**/
+/*  printf("Code: %s\n", code);*/
+/**/
+/*  lexer_init_with_code(code);*/
+/*  lexer_lex();*/
+/*  lexer_tokens_dump(lexer.tokens);*/
+/**/
+/*  compiler_init();*/
+/*  compiler_load_tokens(lexer.tokens, lexer.tokens_count);*/
+/*  compiler_compile();*/
+/**/
+/*  vm_init();*/
+/*  vm_program_load_from_memory(compiler.insts, compiler.insts_count);*/
+/*  vm_program_dump();*/
+/*  vm_stack_dump();*/
+/*  vm_execute();*/
+/*  vm_stack_dump();*/
+/*}*/

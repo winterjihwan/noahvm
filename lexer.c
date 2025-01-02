@@ -18,7 +18,7 @@ inline static void lexer_lex_token(const Token_t token_type, const int len) {
   lexer_code_advance(len);
 }
 
-void lexer_init_code(char *code) { lexer.code = code; }
+void lexer_init_with_code(char *code) { lexer.code = code; }
 
 static int lexer_lex_keyword(void) {
   const char *code = lexer.code;

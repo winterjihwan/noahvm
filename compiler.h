@@ -1,7 +1,8 @@
-#ifndef PARSER_H
-#define PARSER_H
+#ifndef COMPILER_H
+#define COMPILER_H
 
 #include "lexer.h"
+#include "table.h"
 #include "vm.h"
 #include <stddef.h>
 
@@ -12,7 +13,8 @@ typedef struct {
   Inst insts[PROGRAM_STACK_CAP];
   uint64_t insts_count;
 
-} Parser;
+  HashTable env;
+} Compiler;
 
 typedef void (*ParseFn)(void);
 
@@ -21,10 +23,10 @@ typedef struct {
   uint8_t pre_power;
   uint8_t in_power;
   ParseFn fn;
-} Parser_bp;
+} Binding_power;
 
-void parser_init(void);
-void parser_load_tokens(Token *tokens, size_t tokens_count);
-void parser_parse(void);
+void compiler_init(void);
+void compiler_load_tokens(Token *tokens, size_t tokens_count);
+void compiler_compile(void);
 
 #endif

@@ -1,10 +1,9 @@
 #ifndef VM_H
 #define VM_H
 
+#include "table.h"
 #include <stddef.h>
 #include <stdint.h>
-
-typedef int64_t Word;
 
 typedef enum {
   INST_PUSH,
@@ -15,8 +14,17 @@ typedef enum {
   INST_DIV,
   INST_PRINT,
   INST_NEGATE,
+  INST_ASSIGN,
   INST_EOF
 } Inst_t;
+
+typedef union {
+  uint64_t as_u64;
+  int64_t as_i64;
+  float as_f64;
+  char *as_str;
+  void *as_ptr;
+} Word;
 
 typedef struct {
   Inst_t type;
@@ -26,13 +34,17 @@ typedef struct {
 #define VM_STACK_CAP 512
 #define PROGRAM_STACK_CAP 128
 
+typedef uint64_t Addr;
+
 typedef struct {
   Inst program[PROGRAM_STACK_CAP];
-  Word program_size;
-  Word ip;
+  uint64_t program_size;
+  Addr ip;
 
   Word stack[VM_STACK_CAP];
-  Word stack_count;
+  uint64_t stack_count;
+
+  HashTable env;
 } Vm;
 
 #define MAKE_PUSH(val)                                                         \
@@ -49,6 +61,8 @@ typedef struct {
   (Inst) { .type = INST_NEGATE }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }
+#define MAKE_ASSIGN(label)                                                     \
+  (Inst) { .type = INST_ASSIGN, .operand = label }
 
 void vm_init(void);
 void vm_program_load_from_memory(Inst *insts, size_t insts_count);
