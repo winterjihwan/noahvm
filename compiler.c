@@ -33,11 +33,10 @@ inline static void compiler_expr_print(void) {
 
 #define PRATT_TABLE_CAP 16
 static Binding_power compiler_pratt_table[PRATT_TABLE_CAP] = {
-    (Binding_power){.op = Token_Plus, .in_power = 1, .fn = NULL},
-    (Binding_power){
-        .op = Token_Minus, .in_power = 2, .pre_power = 5, .fn = NULL},
-    (Binding_power){.op = Token_Mult, .in_power = 3, .fn = NULL},
-    (Binding_power){.op = Token_Div, .in_power = 4, .fn = NULL},
+    (Binding_power){.op = Token_Plus, .in_power = 1},
+    (Binding_power){.op = Token_Minus, .in_power = 2, .pre_power = 5},
+    (Binding_power){.op = Token_Mult, .in_power = 3},
+    (Binding_power){.op = Token_Div, .in_power = 4},
 };
 
 inline static uint8_t compiler_in_power_get(Token_t type) {
@@ -170,13 +169,12 @@ static void compiler_expr(void) {
   }
 }
 
-#undef PEEK_TOKEN
-#undef NEXT_TOKEN
-#undef MUNCH_TOKEN
-
 void compiler_compile(void) {
   compiler_expr();
   PUSH_INST(MAKE_EOF);
 }
 
+#undef PEEK_TOKEN
+#undef NEXT_TOKEN
+#undef MUNCH_TOKEN
 #undef PUSH_INST

@@ -16,13 +16,10 @@ typedef struct {
   HashTable env;
 } Compiler;
 
-typedef void (*ParseFn)(void);
-
 typedef struct {
   Token_t op;
   uint8_t pre_power;
   uint8_t in_power;
-  ParseFn fn;
 } Binding_power;
 
 void compiler_init(void);

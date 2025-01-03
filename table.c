@@ -20,6 +20,15 @@ inline static HashKey hash_table_key_hash(const char *raw_key) {
   return key;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+static void hash_table_bucket_dump(Bucket *bucket) {
+  printf("Bucket: \n");
+  printf("\tkey: %lld\n", bucket->key);
+  printf("\tdata: %s\n", (char *)bucket->data);
+}
+#pragma clang diagnostic pop
+
 inline static void hash_table_keys_insert(HashTable *ht, HashKey *key) {
   ht->keys[ht->keys_count++] = key;
 }
@@ -28,19 +37,22 @@ void hash_table_insert(HashTable *ht, const char *key_str, void *const data) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
-  Bucket new_bucket = {.key = key, .data = data};
+  Bucket *new_bucket = (Bucket *)malloc(sizeof(Bucket));
+  new_bucket->key = key;
+  new_bucket->data = data;
 
-  Bucket *bucket = &ht->nodes[key_mod];
-  if (bucket->data == NULL) {
-    *bucket = new_bucket;
+  Bucket *bucket = ht->nodes[key_mod];
+  if (bucket == NULL) {
+    ht->nodes[key_mod] = new_bucket;
 
+    hash_table_bucket_dump(ht->nodes[key_mod]);
     hash_table_keys_insert(ht, &key);
     return;
   }
 
   while (1) {
     if (bucket->next == NULL) {
-      bucket->next = &new_bucket;
+      bucket->next = new_bucket;
 
       hash_table_keys_insert(ht, &key);
       return;
@@ -50,28 +62,30 @@ void hash_table_insert(HashTable *ht, const char *key_str, void *const data) {
   }
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-static void hash_table_bucket_dump(Bucket *bucket) {
-  printf("Bucket: \n");
-  printf("\tkey: %lld\n", bucket->key);
-  printf("\tdata: %s\n", (char *)bucket->data);
-}
-
 static void hash_table_keys_dump(HashTable *ht) {
   printf("Keys: \n");
   for (size_t i = 0; i < ht->keys_count; i++) {
     printf("\t%lld\n", *ht->keys[i]);
   }
 }
-#pragma clang diagnostic pop
 
 void **hash_table_get(HashTable *ht, const char *key_str) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
-  Bucket *bucket = &ht->nodes[key_mod];
-  if (bucket->data != NULL) {
+  Bucket *bucket = ht->nodes[key_mod];
+  if (bucket == NULL) {
+    fprintf(stderr, "HT: Value not found for key %s\n", key_str);
+    exit(1);
+  }
+
+  printf("Bucket key: %lld, cur key: %lld, key_mod: %lld\n", bucket->key, key,
+         key_mod);
+  printf("new key: %lld\n", ht->nodes[key_mod]->key);
+
+  hash_table_bucket_dump(bucket);
+
+  if (bucket->key == key) {
     return &bucket->data;
   }
 
@@ -107,7 +121,6 @@ inline static void hash_table_keys_delete(HashTable *ht, HashKey *key) {
   size_t i = 0;
   for (i = 0; i < ht->keys_count; i++) {
     if (ht->keys[i] == key) {
-      // delete
       ht->keys[i] = 0;
       goto merge;
     }
@@ -124,7 +137,12 @@ void hash_table_delete(HashTable *ht, const char *key_str) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
-  Bucket *bucket = &ht->nodes[key_mod];
+  Bucket *bucket = ht->nodes[key_mod];
+
+  if (bucket == NULL) {
+    fprintf(stderr, "HT: Value not found for key %s\n", key_str);
+    exit(2);
+  }
 
   if (bucket->key == key) {
     if (bucket->next != NULL) {
@@ -150,10 +168,11 @@ void hash_table_delete(HashTable *ht, const char *key_str) {
     }
 
     if (bucket->next->next != NULL) {
-      *bucket->next = *bucket->next->next;
+      Bucket *tmp = bucket->next;
+      bucket->next = bucket->next->next;
+      free(tmp);
     } else {
-      bucket->next->data = 0;
-      bucket->next->key = 0;
+      free(bucket->next);
     }
 
     hash_table_keys_delete(ht, &key);
@@ -161,19 +180,20 @@ void hash_table_delete(HashTable *ht, const char *key_str) {
   }
 }
 
-/*int main(void) {*/
-/*  HashTable table = hash_table_new();*/
-/*  hash_table_insert(&table, "Apple", (void *)"Hi");*/
-/*  void **raw_apple_price = hash_table_get(&table, "Apple");*/
-/*  char *apple_price = (char *)(*raw_apple_price);*/
-/*  printf("Fetched %s\n", apple_price);*/
-/*  *raw_apple_price = (void *)"Yo";*/
-/**/
-/*  raw_apple_price = hash_table_get(&table, "Apple");*/
-/*  apple_price = (char *)(*raw_apple_price);*/
-/*  printf("New Fetched %s\n", apple_price);*/
-/**/
-/*  hash_table_keys_dump(&table);*/
-/*  hash_table_delete(&table, "Apple");*/
-/*  hash_table_keys_dump(&table);*/
-/*}*/
+int main(void) {
+  HashTable table = hash_table_new();
+  hash_table_insert(&table, "A", (void *)"Hi");
+  hash_table_bucket_dump((&table)->nodes[230]);
+  void **raw_apple_price = hash_table_get(&table, "A");
+  char *apple_price = (char *)(*raw_apple_price);
+  printf("Fetched %s\n", apple_price);
+  *raw_apple_price = (void *)"Yo";
+
+  raw_apple_price = hash_table_get(&table, "Apple");
+  apple_price = (char *)(*raw_apple_price);
+  printf("New Fetched %s\n", apple_price);
+
+  hash_table_keys_dump(&table);
+  hash_table_delete(&table, "Apple");
+  hash_table_keys_dump(&table);
+}

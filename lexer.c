@@ -157,8 +157,6 @@ void lexer_lex(void) {
       break;
     }
 
-    /*printf("C: %c\n", *code);*/
-
     if (lexer_lex_keyword()) {
       continue;
     }

@@ -16,7 +16,7 @@ struct Bucket {
 };
 
 typedef struct {
-  Bucket nodes[HASH_TABLE_CAP];
+  Bucket *nodes[HASH_TABLE_CAP];
 
   HashKey *keys[HASH_TABLE_CAP];
   uint8_t keys_count;
