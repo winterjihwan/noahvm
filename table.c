@@ -86,7 +86,6 @@ int hash_table_keys_contains(HashTable *ht, char *key_str) {
 
   for (size_t i = 0; i < ht->keys_count; i++) {
     if (*ht->keys[i] == key) {
-      printf("contains key at index %zu", i);
       return 1;
     }
   }
@@ -168,17 +167,3 @@ void hash_table_destruct(HashTable *ht) {
     }
   }
 }
-
-/*int main(void) {*/
-/*  HashTable table = hash_table_new();*/
-/*  hash_table_insert(&table, "A", (void *)"Hi");*/
-/*  void **raw_apple_price = hash_table_get(&table, "A");*/
-/*  char *apple_price = (char *)(*raw_apple_price);*/
-/*  *raw_apple_price = (void *)"Yo";*/
-/*  raw_apple_price = hash_table_get(&table, "A");*/
-/*  apple_price = (char *)(*raw_apple_price);*/
-/*  printf("Apple price: %s", apple_price);*/
-/**/
-/*  hash_table_delete(&table, "A");*/
-/*  hash_table_destruct(&table);*/
-/*}*/
