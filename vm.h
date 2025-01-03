@@ -69,9 +69,11 @@ typedef struct {
   }
 
 void vm_init(void);
+void vm_destruct(void);
 void vm_program_load_from_memory(Inst *insts, size_t insts_count);
 void vm_execute(void);
 char *vm_inst_t_to_str(Inst_t type);
+Word vm_env_resolve(const char *label);
 
 void vm_stack_dump(void);
 void vm_program_dump(void);

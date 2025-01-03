@@ -23,9 +23,12 @@ typedef struct {
 } HashTable;
 
 HashTable hash_table_new(void);
+void hash_table_destruct(HashTable *ht);
+
 void hash_table_insert(HashTable *ht, const char *key_str, void *const data);
 void **hash_table_get(HashTable *ht, const char *key_str);
 void hash_table_delete(HashTable *ht, const char *key_str);
+
 int hash_table_keys_contains(HashTable *ht, char *key_str);
 
 #endif

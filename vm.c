@@ -14,6 +14,8 @@ void vm_init(void) {
   vm.env = hash_table_new();
 }
 
+void vm_destruct(void) { hash_table_destruct(&vm.env); }
+
 void vm_program_load_from_memory(Inst *insts, size_t insts_count) {
   assert(insts_count < PROGRAM_STACK_CAP);
 
@@ -67,6 +69,12 @@ void vm_program_dump(void) {
     printf("%s %lld\n", vm_inst_t_to_str(inst->type), inst->operand.as_u64);
   }
   printf("-----\n\n");
+}
+
+Word vm_env_resolve(const char *label) {
+  void **raw_res = hash_table_get(&vm.env, label);
+  Word word = *(Word *)(*raw_res);
+  return word;
 }
 
 void vm_execute(void) {
@@ -130,8 +138,7 @@ void vm_execute(void) {
       assert(hash_table_keys_contains(&vm.env, label) == 0 &&
              "Redefinition of var");
 
-      word_one = vm.stack[vm.stack_count - 1];
-      void *value = (void *)(&word_one);
+      void *value = (void *)(&vm.stack[vm.stack_count - 1]);
 
       hash_table_insert(&vm.env, label, value);
       continue;
