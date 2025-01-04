@@ -14,7 +14,8 @@ typedef enum {
   INST_DIV,
   INST_PRINT,
   INST_NEGATE,
-  INST_DEFINE,
+  INST_DEF_GLOBAL,
+  INST_DEF_LOCAL,
   INST_VAR_GLOBAL,
   INST_VAR_LOCAL,
   INST_EOF
@@ -55,13 +56,17 @@ typedef struct {
   (Inst) { .type = INST_DIV }
 #define MAKE_NEGATE                                                            \
   (Inst) { .type = INST_NEGATE }
-#define MAKE_DEFINE(label)                                                     \
+#define MAKE_DEF_GLOBAL(label)                                                 \
   (Inst) {                                                                     \
-    .type = INST_DEFINE, .operand = {.as_sv = label }                          \
+    .type = INST_DEF_GLOBAL, .operand = {.as_sv = label }                      \
   }
-#define MAKE_VAR_GLOBAL(label)                                                 \
+#define MAKE_DEF_LOCAL(offset)                                                 \
   (Inst) {                                                                     \
-    .type = INST_VAR_GLOBAL, .operand = {.as_sv = label }                      \
+    .type = INST_DEF_LOCAL, .operand = {.as_u64 = offset }                     \
+  }
+#define MAKE_VAR_GLOBAL(name)                                                  \
+  (Inst) {                                                                     \
+    .type = INST_VAR_GLOBAL, .operand = {.as_sv = name }                       \
   }
 #define MAKE_VAR_LOCAL(offset)                                                 \
   (Inst) {                                                                     \
@@ -77,7 +82,7 @@ void vm_destruct(void);
 void vm_program_load_from_memory(Inst *insts, size_t insts_count);
 void vm_execute(void);
 char *vm_inst_t_to_str(Inst_t type);
-Word vm_env_resolve(const Sv label);
+Word vm_env_resolve(const Sv name);
 
 void vm_stack_dump(void);
 void vm_program_dump(void);

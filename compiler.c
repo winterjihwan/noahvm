@@ -77,12 +77,20 @@ inline static int compiler_sv_to_num(char *str, int len) {
     }                                                                          \
   } while (0)
 
+inline static void compiler_locals_dump(Compiler *compiler) {
+  printf("Locals: \n");
+  for (size_t i = 0; i < compiler->locals_count; i++) {
+    Local *local = &compiler->locals[i];
+    printf("%zu: %.*s\n", i, local->name.len, local->name.str);
+  }
+}
+
 static int compiler_var_resolve(Compiler *compiler, Sv *name) {
   for (int i = compiler->locals_count - 1; i >= 0; i--) {
     Local *local = &compiler->locals[i];
 
     if (local->name.len == name->len && local->depth <= compiler->depth) {
-      if (memcpy(local->name.str, name->str, name->len)) {
+      if (memcmp(local->name.str, name->str, name->len) == 0) {
         return i;
       }
     }
@@ -160,7 +168,7 @@ static void compiler_stmt_print(Compiler *compiler, Token *tokens) {
   compiler_expr(compiler, tokens);
 
   PUSH_INST(MAKE_PRINT);
-
+  PUSH_INST(MAKE_POP);
   MUNCH_TOKEN(Token_Semicolon);
 }
 
@@ -204,11 +212,15 @@ static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
 
   if (compiler->depth == 0) {
     // Global
-    PUSH_INST(MAKE_DEFINE(name));
+    PUSH_INST(MAKE_DEF_GLOBAL(name));
   } else {
     LOCAL_ADD(name, compiler->depth);
+
+    int offset = compiler_var_resolve(compiler, &name);
+    PUSH_INST(MAKE_DEF_LOCAL(offset));
   }
 
+  PUSH_INST(MAKE_POP);
   MUNCH_TOKEN(Token_Semicolon);
 }
 
@@ -227,6 +239,8 @@ static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_LBrace);
   compiler->depth++;
 
+  uint8_t locals_count_prev = compiler->locals_count;
+
   while (1) {
     Token *peek = PEEK_TOKEN;
     if (peek->type == Token_EOF || peek->type == Token_RBrace)
@@ -235,6 +249,11 @@ static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
     compiler_stmt(compiler, tokens);
   }
 
+  for (size_t i = 0; i < compiler->locals_count - locals_count_prev; i++) {
+    PUSH_INST(MAKE_POP);
+  }
+
+  compiler->locals_count = locals_count_prev;
   compiler->depth--;
   MUNCH_TOKEN(Token_RBrace);
 }

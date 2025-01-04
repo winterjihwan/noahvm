@@ -45,8 +45,10 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "print";
   case INST_NEGATE:
     return "negate";
-  case INST_DEFINE:
-    return "define";
+  case INST_DEF_GLOBAL:
+    return "def_global";
+  case INST_DEF_LOCAL:
+    return "def_local";
   case INST_VAR_GLOBAL:
     return "var_global";
   case INST_VAR_LOCAL:
@@ -76,7 +78,9 @@ inline static int vm_inst_has_operand(Inst *inst) {
     return 0;
   case INST_NEGATE:
     return 0;
-  case INST_DEFINE:
+  case INST_DEF_GLOBAL:
+    return 1;
+  case INST_DEF_LOCAL:
     return 1;
   case INST_VAR_GLOBAL:
     return 1;
@@ -162,7 +166,7 @@ void vm_execute(void) {
     case INST_PRINT:
       assert(vm.stack_count > 0 && "Stack underflow");
 
-      word_one = vm.stack[--vm.stack_count];
+      word_one = vm.stack[vm.stack_count - 1];
       printf("%lld\n", word_one.as_u64);
       continue;
 
@@ -173,15 +177,25 @@ void vm_execute(void) {
           -vm.stack[vm.stack_count - 1].as_u64;
       continue;
 
-    case INST_DEFINE:
+    case INST_DEF_GLOBAL:
       assert(vm.stack_count > 0 && "Stack underflow");
 
       Sv assign_name = inst.operand.as_sv;
 
       Word value = vm.stack[vm.stack_count - 1];
-      vm.stack_count--;
 
       hash_table_insert(&vm.env, assign_name, value);
+      continue;
+
+    case INST_DEF_LOCAL:
+      assert(vm.stack_count > 0 && "Stack underflow");
+
+      uint64_t def_offset = (int)inst.operand.as_u64;
+      assert(def_offset < vm.stack_count && "Stack illegal access");
+
+      Word word = vm.stack[def_offset];
+      vm.stack[vm.stack_count++] = word;
+
       continue;
 
     case INST_VAR_GLOBAL:
@@ -197,10 +211,10 @@ void vm_execute(void) {
     case INST_VAR_LOCAL:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
-      uint64_t offset = (int)inst.operand.as_u64;
-      assert(offset + 1 >= vm.stack_count && "Stack illegal access");
+      uint64_t var_offset = (int)inst.operand.as_u64;
+      assert(var_offset < vm.stack_count && "Stack illegal access");
 
-      vm.stack[vm.stack_count++] = vm.stack[offset - 1];
+      vm.stack[vm.stack_count++] = vm.stack[var_offset];
       continue;
 
     case INST_EOF:
