@@ -73,7 +73,7 @@ void vm_program_dump(void) {
   printf("-----\n\n");
 }
 
-Word vm_env_resolve(const char *label) {
+Word vm_env_resolve(const Sv label) {
   void **raw_res = hash_table_get(&vm.env, label);
   Word word = *(Word *)(*raw_res);
   return word;
@@ -136,7 +136,8 @@ void vm_execute(void) {
     case INST_ASSIGN:
       assert(vm.stack_count > 0 && "Stack underflow");
 
-      char *assign_label = inst.operand.as_str;
+      Sv assign_label = inst.operand.as_sv;
+
       assert(hash_table_keys_contains(&vm.env, assign_label) == 0 &&
              "Redefinition of var");
 
@@ -149,7 +150,7 @@ void vm_execute(void) {
     case INST_VAR:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
-      char *var_label = inst.operand.as_str;
+      Sv var_label = inst.operand.as_sv;
       assert(hash_table_keys_contains(&vm.env, var_label) == 1 &&
              "Undefined var");
 

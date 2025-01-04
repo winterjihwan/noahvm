@@ -23,7 +23,7 @@ typedef union {
   uint64_t as_u64;
   int64_t as_i64;
   float as_f64;
-  char *as_str;
+  Sv as_sv;
   void *as_ptr;
 } Word;
 
@@ -64,7 +64,7 @@ typedef struct {
   (Inst) { .type = INST_NEGATE }
 #define MAKE_ASSIGN(label)                                                     \
   (Inst) {                                                                     \
-    .type = INST_ASSIGN, .operand = {.as_str = label }                         \
+    .type = INST_ASSIGN, .operand = {.as_sv = label }                          \
   }
 #define MAKE_VAR(label)                                                        \
   (Inst) {                                                                     \
@@ -78,7 +78,7 @@ void vm_destruct(void);
 void vm_program_load_from_memory(Inst *insts, size_t insts_count);
 void vm_execute(void);
 char *vm_inst_t_to_str(Inst_t type);
-Word vm_env_resolve(const char *label);
+Word vm_env_resolve(const Sv label);
 
 void vm_stack_dump(void);
 void vm_program_dump(void);

@@ -15,16 +15,11 @@ typedef struct {
 } Ir;
 
 typedef struct {
-  char *str;
-  uint64_t len;
-} Sv;
-
-typedef struct {
   Ir *ir;
 
   char *name;
 
-  char *locals[LOCAL_ENV_CAP];
+  Sv locals[LOCAL_ENV_CAP];
   uint8_t locals_count;
 
   uint8_t scope;

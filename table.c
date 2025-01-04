@@ -10,11 +10,11 @@ inline Hash_Table hash_table_new(void) {
   return ht;
 }
 
-inline static HashKey hash_table_key_hash(const char *raw_key) {
+inline static HashKey hash_table_key_hash(const Sv raw_key) {
   HashKey key = 5381;
 
-  for (size_t i = 0; raw_key[i] != '\0'; i++) {
-    key = ((key << 5) + key) + raw_key[i];
+  for (size_t i = 0; i < raw_key.len; i++) {
+    key = ((key << 5) + key) + raw_key.str[i];
   }
 
   return key;
@@ -24,7 +24,7 @@ inline static void hash_table_keys_insert(Hash_Table *ht, HashKey *key) {
   ht->keys[ht->keys_count++] = key;
 }
 
-void hash_table_insert(Hash_Table *ht, const char *key_str, void *const data) {
+void hash_table_insert(Hash_Table *ht, const Sv key_str, void *const data) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
@@ -52,13 +52,14 @@ void hash_table_insert(Hash_Table *ht, const char *key_str, void *const data) {
   }
 }
 
-void **hash_table_get(Hash_Table *ht, const char *key_str) {
+void **hash_table_get(Hash_Table *ht, const Sv key_str) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
   Bucket *bucket = ht->nodes[key_mod];
   if (bucket == NULL) {
-    fprintf(stderr, "HT: Value not found for key %s\n", key_str);
+    fprintf(stderr, "HT: Value not found for key %.*s\n", key_str.len,
+            key_str.str);
     exit(1);
   }
 
@@ -68,7 +69,8 @@ void **hash_table_get(Hash_Table *ht, const char *key_str) {
 
   while (1) {
     if (bucket->next == NULL) {
-      fprintf(stderr, "HT: Value not found for key %s\n", key_str);
+      fprintf(stderr, "HT: Value not found for key %.*s\n", key_str.len,
+              key_str.str);
       exit(1);
     }
 
@@ -81,7 +83,7 @@ void **hash_table_get(Hash_Table *ht, const char *key_str) {
   }
 }
 
-int hash_table_keys_contains(Hash_Table *ht, char *key_str) {
+int hash_table_keys_contains(Hash_Table *ht, Sv key_str) {
   HashKey key = hash_table_key_hash(key_str);
 
   for (size_t i = 0; i < ht->keys_count; i++) {
@@ -109,14 +111,15 @@ merge:
   ht->keys_count--;
 }
 
-void hash_table_delete(Hash_Table *ht, const char *key_str) {
+void hash_table_delete(Hash_Table *ht, const Sv key_str) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
   Bucket *bucket = ht->nodes[key_mod];
 
   if (bucket == NULL) {
-    fprintf(stderr, "HT: Value not found for key %s\n", key_str);
+    fprintf(stderr, "HT: Value not found for key %.*s\n", key_str.len,
+            key_str.str);
     exit(2);
   }
 
@@ -134,7 +137,8 @@ void hash_table_delete(Hash_Table *ht, const char *key_str) {
 
   while (1) {
     if (bucket->next == NULL) {
-      fprintf(stderr, "HT: Value not found for key %s\n", key_str);
+      fprintf(stderr, "HT: Value not found for key %.*s\n", key_str.len,
+              key_str.str);
       exit(2);
     }
 

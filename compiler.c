@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "compiler.h"
 #include "lexer.h"
@@ -187,6 +188,11 @@ inline static int compiler_token_is_type(Token *token) {
   return 0;
 }
 
+#define LOCAL_ADD(compiler, local)                                             \
+  do {                                                                         \
+    compiler->locals[compiler->locals_count++] = local;                        \
+  } while (0)
+
 static void compiler_assign(Compiler *compiler, Token *tokens) {
   Token *type = NEXT_TOKEN;
 
@@ -195,18 +201,20 @@ static void compiler_assign(Compiler *compiler, Token *tokens) {
   }
 
   Token *identifier = NEXT_TOKEN;
-  Sv label = (Sv){
-      .str = identifier->start,
-      .len = identifier->len,
-  };
 
   MUNCH_TOKEN(Token_Equal);
 
   compiler_expr(compiler, tokens);
 
+  Sv sv = (Sv){
+      .str = identifier->start,
+      .len = identifier->len,
+  };
+
   if (compiler->scope == 0) {
-    // global
-    PUSH_INST(MAKE_ASSIGN("Hello"));
+    PUSH_INST(MAKE_ASSIGN(sv));
+  } else {
+    LOCAL_ADD(compiler, sv);
   }
 }
 
