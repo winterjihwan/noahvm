@@ -191,14 +191,19 @@ inline static int compiler_token_is_type(Token *token) {
   do {                                                                         \
     compiler->locals[compiler->locals_count++] = local;                        \
   } while (0)
+#define EXPECT_TOKEN(expected_type)                                            \
+  do {                                                                         \
+    if (*PEEK_TOKEN.type != expected_type) {                                   \
+      fprintf(stderr, "Expected type %s",                                      \
+              lexer_token_t_to_str(expected_type));                            \
+      exit(7);                                                                 \
+    }                                                                          \
+  } while (0)
 
 static void compiler_assign(Compiler *compiler, Token *tokens) {
   Token *type = NEXT_TOKEN;
 
-  if (*PEEK_TOKEN.type != Token_Identifier) {
-    fprintf(stderr, "Expected identifier");
-  }
-
+  EXPECT_TOKEN(Token_Identifier);
   Token *identifier = NEXT_TOKEN;
 
   MUNCH_TOKEN(Token_Equal);
@@ -216,16 +221,22 @@ static void compiler_assign(Compiler *compiler, Token *tokens) {
   } else {
     LOCAL_ADD(compiler, sv);
   }
+
+  MUNCH_TOKEN(Token_Semicolon);
 }
 
 static void compiler_stmt(Compiler *compiler, Token *tokens) {
-  Token *next = PEEK_TOKEN;
+  while (1) {
+    Token *next = PEEK_TOKEN;
+    if (next->type == Token_EOF)
+      return;
 
-  if (compiler_token_is_type(next)) {
-    compiler_assign(compiler, tokens);
-  } else {
-    compiler_expr_stmt(compiler, tokens);
-  };
+    if (compiler_token_is_type(next)) {
+      compiler_assign(compiler, tokens);
+    } else {
+      compiler_expr_stmt(compiler, tokens);
+    };
+  }
 }
 
 void compiler_compile(Compiler *compiler, Token *tokens) {

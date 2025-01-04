@@ -56,6 +56,35 @@ char *vm_inst_t_to_str(Inst_t type) {
   }
 }
 
+inline static int vm_inst_has_operand(Inst *inst) {
+  switch (inst->type) {
+  case INST_PUSH:
+    return 1;
+  case INST_POP:
+    return 0;
+  case INST_PLUS:
+    return 0;
+  case INST_MINUS:
+    return 0;
+  case INST_MULT:
+    return 0;
+  case INST_DIV:
+    return 0;
+  case INST_PRINT:
+    return 1;
+  case INST_NEGATE:
+    return 0;
+  case INST_DEFINE:
+    return 1;
+  case INST_VAR:
+    return 1;
+  case INST_EOF:
+    return 0;
+  default:
+    __builtin_unreachable();
+  }
+}
+
 void vm_stack_dump(void) {
   printf("Stack: \n");
   for (size_t i = 0; i < (size_t)vm.stack_count; i++) {
@@ -68,7 +97,11 @@ void vm_program_dump(void) {
   printf("Program: \n");
   for (size_t i = 0; i < (size_t)vm.program_size; i++) {
     Inst *inst = &vm.program[i];
-    printf("%s %lld\n", vm_inst_t_to_str(inst->type), inst->operand.as_u64);
+    printf("%s ", vm_inst_t_to_str(inst->type));
+    if (vm_inst_has_operand(inst)) {
+      printf("%lld", inst->operand.as_u64);
+    }
+    printf("\n");
   }
   printf("-----\n\n");
 }

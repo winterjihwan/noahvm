@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
   char code[CODE_CAP] = {0};
   load_code_from_file(code_path, code);
 
-  printf("Code: %s\n", code);
+  printf("Code: \n%s\n\n", code);
 
   lexer_init_with_code(code);
   lexer_lex();

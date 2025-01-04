@@ -20,7 +20,7 @@ inline static HashKey hash_table_key_hash(const Sv raw_key) {
   return key;
 }
 
-inline static void hash_table_keys_insert(Hash_Table *ht, HashKey *key) {
+inline static void hash_table_keys_insert(Hash_Table *ht, HashKey key) {
   ht->keys[ht->keys_count++] = key;
 }
 
@@ -38,7 +38,7 @@ void hash_table_insert(Hash_Table *ht, const Sv key_str, void *const data) {
   if (bucket != NULL)
     new_bucket->prev = bucket;
 
-  hash_table_keys_insert(ht, &key);
+  hash_table_keys_insert(ht, key);
   return;
 }
 
@@ -75,16 +75,14 @@ not_found:
 int hash_table_keys_contains(Hash_Table *ht, Sv key_str) {
   HashKey key = hash_table_key_hash(key_str);
 
-  for (size_t i = 0; i < ht->keys_count; i++) {
-    if (*ht->keys[i] == key) {
+  for (size_t i = 0; i < ht->keys_count; i++)
+    if (ht->keys[i] == key)
       return 1;
-    }
-  }
 
   return 0;
 }
 
-inline static void hash_table_keys_delete(Hash_Table *ht, HashKey *key) {
+inline static void hash_table_keys_delete(Hash_Table *ht, HashKey key) {
   size_t i = 0;
   for (i = 0; i < ht->keys_count; i++) {
     if (ht->keys[i] == key) {
@@ -118,7 +116,7 @@ void hash_table_delete(Hash_Table *ht, const Sv key_str) {
       free(bucket);
     }
 
-    hash_table_keys_delete(ht, &key);
+    hash_table_keys_delete(ht, key);
     return;
   }
 
@@ -139,7 +137,7 @@ void hash_table_delete(Hash_Table *ht, const Sv key_str) {
       free(bucket->prev);
     }
 
-    hash_table_keys_delete(ht, &key);
+    hash_table_keys_delete(ht, key);
     return;
   }
 
