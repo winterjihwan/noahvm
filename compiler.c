@@ -15,11 +15,13 @@ static Ir ir = {0};
 void compiler_init(Compiler *compiler) {
   compiler->ir = &ir;
   compiler->name = "main";
+  compiler->depth = 0;
+  compiler->enclosing = NULL;
 }
 
 void compiler_dump(Compiler *compiler) {
   printf("%s:\n", compiler->name);
-  printf("\tscope: %d\n", compiler->scope);
+  printf("\tdepth: %d\n", compiler->depth);
 }
 
 static Bp PRED_TABLE[Token_EOF] = {
@@ -75,23 +77,40 @@ inline static int compiler_sv_to_num(char *str, int len) {
     }                                                                          \
   } while (0)
 
+static int compiler_var_resolve(Compiler *compiler, Sv *name) {
+  for (int i = compiler->locals_count - 1; i >= 0; i--) {
+    Local *local = &compiler->locals[i];
+
+    if (local->name.len == name->len && local->depth <= compiler->depth) {
+      if (memcpy(local->name.str, name->str, name->len)) {
+        return i;
+      }
+    }
+  }
+
+  return -1;
+}
+
 static void compiler_emit_ir(Compiler *compiler, Token *lhs) {
   if (lhs->type == Token_Number) {
     Word operand = (Word){.as_u64 = compiler_sv_to_num(lhs->start, lhs->len)};
 
     PUSH_INST(MAKE_PUSH(operand));
   } else if (lhs->type == Token_Identifier) {
-    Sv sv = (Sv){
+    Sv name = (Sv){
         .str = lhs->start,
         .len = lhs->len,
     };
+    int offset = compiler_var_resolve(compiler, &name);
 
-    PUSH_INST(MAKE_VAR(sv));
+    if (offset == -1) {
+      PUSH_INST(MAKE_VAR_GLOBAL(name));
+    } else {
+      PUSH_INST(MAKE_VAR_LOCAL(offset));
+    }
   }
 }
 
-/*if (!compiler_token_ignore_emit(lhs->type))*/
-/*  PUSH_INST(MAKE_PUSH(compiler_sv_to_num(lhs->start, lhs->len)));*/
 static void compiler_expr_bp(Compiler *compiler, Token *tokens,
                              uint8_t min_bp) {
   Token *lhs = NEXT_TOKEN;
@@ -152,9 +171,10 @@ static void compiler_expr_stmt(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_Semicolon);
 }
 
-#define LOCAL_ADD(compiler, local)                                             \
+#define LOCAL_ADD(_name, _depth)                                               \
   do {                                                                         \
-    compiler->locals[compiler->locals_count++] = local;                        \
+    compiler->locals[compiler->locals_count++] =                               \
+        (Local){.name = _name, .depth = _depth};                               \
   } while (0)
 #define EXPECT_TOKEN(expected_type)                                            \
   do {                                                                         \
@@ -166,50 +186,87 @@ static void compiler_expr_stmt(Compiler *compiler, Token *tokens) {
   } while (0)
 
 static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
-  Token *type = NEXT_TOKEN;
-
-  EXPECT_TOKEN(Token_Identifier);
   Token *identifier = NEXT_TOKEN;
+
+  if (*PEEK_TOKEN.type == Token_Semicolon) {
+    MUNCH_TOKEN(Token_Semicolon);
+    return;
+  }
 
   MUNCH_TOKEN(Token_Equal);
 
   compiler_expr(compiler, tokens);
 
-  Sv sv = (Sv){
+  Sv name = (Sv){
       .str = identifier->start,
       .len = identifier->len,
   };
 
-  if (compiler->scope == 0) {
+  if (compiler->depth == 0) {
     // Global
-    PUSH_INST(MAKE_DEFINE(sv));
+    PUSH_INST(MAKE_DEFINE(name));
   } else {
-    LOCAL_ADD(compiler, sv);
+    LOCAL_ADD(name, compiler->depth);
   }
 
   MUNCH_TOKEN(Token_Semicolon);
 }
 
-static void compiler_stmt(Compiler *compiler, Token *tokens) {
+static void compiler_stmt_define(Compiler *compiler, Token *tokens) {
+  // TODO: Type checking
+  Token *type = NEXT_TOKEN;
+
+  EXPECT_TOKEN(Token_Identifier);
+
+  compiler_stmt_assign(compiler, tokens);
+}
+
+static void compiler_stmt(Compiler *compiler, Token *tokens);
+
+static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
+  MUNCH_TOKEN(Token_LBrace);
+  compiler->depth++;
+
   while (1) {
-    Token *next = PEEK_TOKEN;
-    if (next->type == Token_EOF)
-      return;
+    Token *peek = PEEK_TOKEN;
+    if (peek->type == Token_EOF || peek->type == Token_RBrace)
+      break;
 
-    if (next->type == Token_Int || next->type == Token_Str) {
-      compiler_stmt_assign(compiler, tokens);
-
-    } else if (next->type == Token_Print) {
-      compiler_stmt_print(compiler, tokens);
-
-    } else {
-      compiler_expr_stmt(compiler, tokens);
-    };
+    compiler_stmt(compiler, tokens);
   }
+
+  compiler->depth--;
+  MUNCH_TOKEN(Token_RBrace);
+}
+
+static void compiler_stmt(Compiler *compiler, Token *tokens) {
+  Token *peek = PEEK_TOKEN;
+
+  if (peek->type == Token_Int || peek->type == Token_Str) {
+    compiler_stmt_define(compiler, tokens);
+
+  } else if (peek->type == Token_Identifier) {
+    compiler_stmt_assign(compiler, tokens);
+
+  } else if (peek->type == Token_Print) {
+    compiler_stmt_print(compiler, tokens);
+
+  } else if (peek->type == Token_LBrace) {
+    compiler_stmt_block(compiler, tokens);
+
+  } else if (peek->type == Token_Number) {
+    compiler_expr_stmt(compiler, tokens);
+  };
 }
 
 void compiler_compile(Compiler *compiler, Token *tokens) {
-  compiler_stmt(compiler, tokens);
+  while (1) {
+    Token *peek = PEEK_TOKEN;
+    if (peek->type == Token_EOF)
+      break;
+
+    compiler_stmt(compiler, tokens);
+  }
 
   PUSH_INST(MAKE_EOF);
 }

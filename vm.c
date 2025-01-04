@@ -47,8 +47,10 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "negate";
   case INST_DEFINE:
     return "define";
-  case INST_VAR:
-    return "var";
+  case INST_VAR_GLOBAL:
+    return "var_global";
+  case INST_VAR_LOCAL:
+    return "var_local";
   case INST_EOF:
     return "eof";
   default:
@@ -76,7 +78,9 @@ inline static int vm_inst_has_operand(Inst *inst) {
     return 0;
   case INST_DEFINE:
     return 1;
-  case INST_VAR:
+  case INST_VAR_GLOBAL:
+    return 1;
+  case INST_VAR_LOCAL:
     return 1;
   case INST_EOF:
     return 0;
@@ -172,25 +176,31 @@ void vm_execute(void) {
     case INST_DEFINE:
       assert(vm.stack_count > 0 && "Stack underflow");
 
-      Sv assign_label = inst.operand.as_sv;
-
-      assert(hash_table_keys_contains(&vm.env, assign_label) == 0 &&
-             "Redefinition of var");
+      Sv assign_name = inst.operand.as_sv;
 
       Word value = vm.stack[vm.stack_count - 1];
       vm.stack_count--;
 
-      hash_table_insert(&vm.env, assign_label, value);
+      hash_table_insert(&vm.env, assign_name, value);
       continue;
 
-    case INST_VAR:
+    case INST_VAR_GLOBAL:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
-      Sv var_label = inst.operand.as_sv;
-      assert(hash_table_keys_contains(&vm.env, var_label) == 1 &&
+      Sv var_name = inst.operand.as_sv;
+      assert(hash_table_keys_contains(&vm.env, var_name) == 1 &&
              "Undefined var");
 
-      vm.stack[vm.stack_count++] = vm_env_resolve(var_label);
+      vm.stack[vm.stack_count++] = vm_env_resolve(var_name);
+      continue;
+
+    case INST_VAR_LOCAL:
+      assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
+
+      uint64_t offset = (int)inst.operand.as_u64;
+      assert(offset + 1 >= vm.stack_count && "Stack illegal access");
+
+      vm.stack[vm.stack_count++] = vm.stack[offset - 1];
       continue;
 
     case INST_EOF:

@@ -14,16 +14,24 @@ typedef struct {
   uint64_t insts_count;
 } Ir;
 
+typedef struct Compiler Compiler;
+
 typedef struct {
+  Sv name;
+  uint8_t depth;
+} Local;
+
+struct Compiler {
+  Compiler *enclosing;
+
   Ir *ir;
 
   char *name;
+  uint8_t depth;
 
-  Sv locals[LOCAL_ENV_CAP];
+  Local locals[LOCAL_ENV_CAP];
   uint8_t locals_count;
-
-  uint8_t scope;
-} Compiler;
+};
 
 typedef enum {
   BP_NONE,

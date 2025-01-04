@@ -91,4 +91,5 @@ int main(int argc, char **argv) {
   vm_program_dump();
   vm_execute();
   vm_stack_dump();
+  vm_destruct();
 }

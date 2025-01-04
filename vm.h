@@ -15,7 +15,8 @@ typedef enum {
   INST_PRINT,
   INST_NEGATE,
   INST_DEFINE,
-  INST_VAR,
+  INST_VAR_GLOBAL,
+  INST_VAR_LOCAL,
   INST_EOF
 } Inst_t;
 
@@ -58,9 +59,13 @@ typedef struct {
   (Inst) {                                                                     \
     .type = INST_DEFINE, .operand = {.as_sv = label }                          \
   }
-#define MAKE_VAR(label)                                                        \
+#define MAKE_VAR_GLOBAL(label)                                                 \
   (Inst) {                                                                     \
-    .type = INST_VAR, .operand = {.as_sv = label }                             \
+    .type = INST_VAR_GLOBAL, .operand = {.as_sv = label }                      \
+  }
+#define MAKE_VAR_LOCAL(offset)                                                 \
+  (Inst) {                                                                     \
+    .type = INST_VAR_LOCAL, .operand = {.as_u64 = offset }                     \
   }
 #define MAKE_PRINT                                                             \
   (Inst) { .type = INST_PRINT }
