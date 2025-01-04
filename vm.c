@@ -71,7 +71,7 @@ inline static int vm_inst_has_operand(Inst *inst) {
   case INST_DIV:
     return 0;
   case INST_PRINT:
-    return 1;
+    return 0;
   case INST_NEGATE:
     return 0;
   case INST_DEFINE:
@@ -106,11 +106,7 @@ void vm_program_dump(void) {
   printf("-----\n\n");
 }
 
-Word vm_env_resolve(const Sv label) {
-  void **raw_res = hash_table_get(&vm.env, label);
-  Word word = *(Word *)(*raw_res);
-  return word;
-}
+Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 
 void vm_execute(void) {
   while (1) {
@@ -159,6 +155,13 @@ void vm_execute(void) {
       vm.stack[--vm.stack_count - 1].as_u64 /= word_one.as_u64;
       continue;
 
+    case INST_PRINT:
+      assert(vm.stack_count > 0 && "Stack underflow");
+
+      word_one = vm.stack[--vm.stack_count];
+      printf("%lld\n", word_one.as_u64);
+      continue;
+
     case INST_NEGATE:
       assert(vm.stack_count > 0 && "Stack underflow");
 
@@ -174,7 +177,7 @@ void vm_execute(void) {
       assert(hash_table_keys_contains(&vm.env, assign_label) == 0 &&
              "Redefinition of var");
 
-      void *value = (void *)(&vm.stack[vm.stack_count - 1]);
+      Word value = vm.stack[vm.stack_count - 1];
       vm.stack_count--;
 
       hash_table_insert(&vm.env, assign_label, value);

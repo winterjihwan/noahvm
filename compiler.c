@@ -17,63 +17,20 @@ void compiler_init(Compiler *compiler) {
   compiler->name = "main";
 }
 
-static void compiler_expr_print(Compiler *compiler) {
-  compiler->ir->insts[compiler->ir->insts_count++] = (Inst){
-      .type = INST_PRINT,
-  };
-
-  compiler->ir->insts_count = 0;
-}
-
 void compiler_dump(Compiler *compiler) {
   printf("%s:\n", compiler->name);
   printf("\tscope: %d\n", compiler->scope);
 }
 
-#define PRATT_TABLE_CAP 16
-static Binding_power compiler_pratt_table[PRATT_TABLE_CAP] = {
-    (Binding_power){.op = Token_Plus, .in_power = 1},
-    (Binding_power){.op = Token_Minus, .in_power = 2, .pre_power = 5},
-    (Binding_power){.op = Token_Mult, .in_power = 3},
-    (Binding_power){.op = Token_Div, .in_power = 4},
+static Bp PRED_TABLE[Token_EOF] = {
+    [Token_Plus] = {.in_power = BP_IN_PLUS},
+    [Token_Minus] = {.in_power = BP_IN_MINUS, .pre_power = BP_PRE_MINUS},
+    [Token_Mult] = {.in_power = BP_IN_MULT},
+    [Token_Div] = {.in_power = BP_IN_DIV},
 };
-
-inline static uint8_t compiler_in_power_get(Token_t type) {
-  for (size_t i = 0; i < PRATT_TABLE_CAP; i++) {
-    if (type == compiler_pratt_table[i].op) {
-      uint8_t in_power = compiler_pratt_table[i].in_power;
-
-      return in_power;
-    }
-  }
-
-  return 0;
-}
-
-inline static uint8_t compiler_pre_power_get(Token_t type) {
-  for (size_t i = 0; i < PRATT_TABLE_CAP; i++) {
-    if (type == compiler_pratt_table[i].op) {
-      uint8_t pre_power = compiler_pratt_table[i].pre_power;
-
-      return pre_power;
-    }
-  }
-
-  return 0;
-}
 
 inline static int compiler_token_is_pre_op(Token_t type) {
   if (type == Token_Minus)
-    return 1;
-
-  return 0;
-}
-
-inline static int compiler_token_ignore_emit(Token_t type) {
-  if (compiler_token_is_pre_op(type))
-    return 1;
-
-  if (type == Token_LParen)
     return 1;
 
   return 0;
@@ -95,7 +52,7 @@ static Inst compiler_translate_op(Token_t type) {
   };
 }
 
-inline static int compiler_str_view_to_num(char *str, int len) {
+inline static int compiler_sv_to_num(char *str, int len) {
   char buf[len + 1];
   snprintf(buf, len + 1, "%.*s", len, str);
   return strtol(buf, NULL, 10);
@@ -118,13 +75,30 @@ inline static int compiler_str_view_to_num(char *str, int len) {
     }                                                                          \
   } while (0)
 
+static void compiler_emit_ir(Compiler *compiler, Token *lhs) {
+  if (lhs->type == Token_Number) {
+    Word operand = (Word){.as_u64 = compiler_sv_to_num(lhs->start, lhs->len)};
+
+    PUSH_INST(MAKE_PUSH(operand));
+  } else if (lhs->type == Token_Identifier) {
+    Sv sv = (Sv){
+        .str = lhs->start,
+        .len = lhs->len,
+    };
+
+    PUSH_INST(MAKE_VAR(sv));
+  }
+}
+
+/*if (!compiler_token_ignore_emit(lhs->type))*/
+/*  PUSH_INST(MAKE_PUSH(compiler_sv_to_num(lhs->start, lhs->len)));*/
 static void compiler_expr_bp(Compiler *compiler, Token *tokens,
                              uint8_t min_bp) {
   Token *lhs = NEXT_TOKEN;
 
   int lhs_is_pre_op = compiler_token_is_pre_op(lhs->type);
   if (lhs_is_pre_op) {
-    uint8_t pre_bp = compiler_pre_power_get(lhs->type);
+    uint8_t pre_bp = PRED_TABLE[lhs->type].pre_power;
     compiler_expr_bp(compiler, tokens, pre_bp);
 
     PUSH_INST(MAKE_NEGATE);
@@ -134,15 +108,14 @@ static void compiler_expr_bp(Compiler *compiler, Token *tokens,
     MUNCH_TOKEN(Token_RParen);
   }
 
-  if (!compiler_token_ignore_emit(lhs->type))
-    PUSH_INST(MAKE_PUSH(compiler_str_view_to_num(lhs->start, lhs->len)));
+  compiler_emit_ir(compiler, lhs);
 
   while (1) {
     Token *op = PEEK_TOKEN;
     if (op->type == Token_EOF)
       break;
 
-    uint8_t in_bp = compiler_in_power_get(op->type);
+    uint8_t in_bp = PRED_TABLE[op->type].in_power;
 
     if (!in_bp)
       break;
@@ -159,32 +132,24 @@ static void compiler_expr_bp(Compiler *compiler, Token *tokens,
 }
 
 static void compiler_expr(Compiler *compiler, Token *tokens) {
-  Token *token = PEEK_TOKEN;
+  compiler_expr_bp(compiler, tokens, 0);
+}
 
-  // Native fn
-  if (token->type == Token_Print) {
-    compiler_expr_print(compiler);
-  } else {
-    compiler_expr_bp(compiler, tokens, 0);
-  }
+static void compiler_stmt_print(Compiler *compiler, Token *tokens) {
+  MUNCH_TOKEN(Token_Print);
+
+  compiler_expr(compiler, tokens);
+
+  PUSH_INST(MAKE_PRINT);
+
+  MUNCH_TOKEN(Token_Semicolon);
 }
 
 static void compiler_expr_stmt(Compiler *compiler, Token *tokens) {
-  Token *token = PEEK_TOKEN;
+  compiler_expr(compiler, tokens);
 
-  if (token->type == Token_Print) {
-    compiler_expr_print(compiler);
-  } else {
-    compiler_expr_bp(compiler, tokens, 0);
-  }
-}
-
-inline static int compiler_token_is_type(Token *token) {
-  if (token->type == Token_Int || token->type == Token_Str) {
-    return 1;
-  }
-
-  return 0;
+  PUSH_INST(MAKE_POP);
+  MUNCH_TOKEN(Token_Semicolon);
 }
 
 #define LOCAL_ADD(compiler, local)                                             \
@@ -200,7 +165,7 @@ inline static int compiler_token_is_type(Token *token) {
     }                                                                          \
   } while (0)
 
-static void compiler_assign(Compiler *compiler, Token *tokens) {
+static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
   Token *type = NEXT_TOKEN;
 
   EXPECT_TOKEN(Token_Identifier);
@@ -231,8 +196,12 @@ static void compiler_stmt(Compiler *compiler, Token *tokens) {
     if (next->type == Token_EOF)
       return;
 
-    if (compiler_token_is_type(next)) {
-      compiler_assign(compiler, tokens);
+    if (next->type == Token_Int || next->type == Token_Str) {
+      compiler_stmt_assign(compiler, tokens);
+
+    } else if (next->type == Token_Print) {
+      compiler_stmt_print(compiler, tokens);
+
     } else {
       compiler_expr_stmt(compiler, tokens);
     };
@@ -249,3 +218,7 @@ void compiler_compile(Compiler *compiler, Token *tokens) {
 #undef NEXT_TOKEN
 #undef MUNCH_TOKEN
 #undef PUSH_INST
+#undef POP_INST
+
+#undef LOCAL_ADD
+#undef EXPECT_TOKEN

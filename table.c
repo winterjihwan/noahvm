@@ -24,7 +24,7 @@ inline static void hash_table_keys_insert(Hash_Table *ht, HashKey key) {
   ht->keys[ht->keys_count++] = key;
 }
 
-void hash_table_insert(Hash_Table *ht, const Sv key_str, void *const data) {
+void hash_table_insert(Hash_Table *ht, const Sv key_str, const Word data) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
@@ -42,7 +42,7 @@ void hash_table_insert(Hash_Table *ht, const Sv key_str, void *const data) {
   return;
 }
 
-void **hash_table_get(Hash_Table *ht, const Sv key_str) {
+Word *hash_table_get(Hash_Table *ht, const Sv key_str) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 

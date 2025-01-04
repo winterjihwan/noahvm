@@ -19,14 +19,6 @@ typedef enum {
   INST_EOF
 } Inst_t;
 
-typedef union {
-  uint64_t as_u64;
-  int64_t as_i64;
-  float as_f64;
-  Sv as_sv;
-  void *as_ptr;
-} Word;
-
 typedef struct {
   Inst_t type;
   Word operand;
@@ -48,10 +40,10 @@ typedef struct {
   Hash_Table env;
 } Vm;
 
-#define MAKE_PUSH(val)                                                         \
-  (Inst) {                                                                     \
-    .type = INST_PUSH, .operand = {.as_u64 = val }                             \
-  }
+#define MAKE_PUSH(word)                                                        \
+  (Inst) { .type = INST_PUSH, .operand = word }
+#define MAKE_POP                                                               \
+  (Inst) { .type = INST_POP }
 #define MAKE_PLUS                                                              \
   (Inst) { .type = INST_PLUS }
 #define MAKE_MINUS                                                             \
@@ -68,8 +60,10 @@ typedef struct {
   }
 #define MAKE_VAR(label)                                                        \
   (Inst) {                                                                     \
-    .type = INST_VAR, .operand = {.as_str = label }                            \
+    .type = INST_VAR, .operand = {.as_sv = label }                             \
   }
+#define MAKE_PRINT                                                             \
+  (Inst) { .type = INST_PRINT }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }
 

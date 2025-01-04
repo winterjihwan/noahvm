@@ -25,11 +25,19 @@ typedef struct {
   uint8_t scope;
 } Compiler;
 
+typedef enum {
+  BP_NONE,
+  BP_IN_PLUS,
+  BP_IN_MINUS,
+  BP_IN_MULT,
+  BP_IN_DIV,
+  BP_PRE_MINUS,
+} Bp_t;
+
 typedef struct {
-  Token_t op;
   uint8_t pre_power;
   uint8_t in_power;
-} Binding_power;
+} Bp;
 
 void compiler_init(Compiler *compiler);
 void compiler_compile(Compiler *compiler, Token *tokens);
