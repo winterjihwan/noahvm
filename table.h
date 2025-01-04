@@ -15,7 +15,7 @@ typedef struct {
 } Sv;
 
 struct Bucket {
-  Bucket *next;
+  Bucket *prev;
   HashKey key;
   void *data;
 };

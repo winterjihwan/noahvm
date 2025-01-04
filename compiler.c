@@ -139,7 +139,6 @@ static void compiler_expr_bp(Compiler *compiler, Token *tokens,
 
   while (1) {
     Token *op = PEEK_TOKEN;
-
     if (op->type == Token_EOF)
       break;
 
@@ -212,14 +211,17 @@ static void compiler_assign(Compiler *compiler, Token *tokens) {
   };
 
   if (compiler->scope == 0) {
-    PUSH_INST(MAKE_ASSIGN(sv));
+    // Global
+    PUSH_INST(MAKE_DEFINE(sv));
   } else {
     LOCAL_ADD(compiler, sv);
   }
 }
 
 static void compiler_stmt(Compiler *compiler, Token *tokens) {
-  if (compiler_token_is_type(PEEK_TOKEN)) {
+  Token *next = PEEK_TOKEN;
+
+  if (compiler_token_is_type(next)) {
     compiler_assign(compiler, tokens);
   } else {
     compiler_expr_stmt(compiler, tokens);
@@ -228,7 +230,7 @@ static void compiler_stmt(Compiler *compiler, Token *tokens) {
 
 void compiler_compile(Compiler *compiler, Token *tokens) {
   compiler_stmt(compiler, tokens);
-  /*compiler_expr(compiler, tokens);*/
+
   PUSH_INST(MAKE_EOF);
 }
 

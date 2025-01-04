@@ -45,8 +45,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "print";
   case INST_NEGATE:
     return "negate";
-  case INST_ASSIGN:
-    return "assign";
+  case INST_DEFINE:
+    return "define";
   case INST_VAR:
     return "var";
   case INST_EOF:
@@ -133,7 +133,7 @@ void vm_execute(void) {
           -vm.stack[vm.stack_count - 1].as_u64;
       continue;
 
-    case INST_ASSIGN:
+    case INST_DEFINE:
       assert(vm.stack_count > 0 && "Stack underflow");
 
       Sv assign_label = inst.operand.as_sv;

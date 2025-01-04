@@ -14,7 +14,7 @@ typedef enum {
   INST_DIV,
   INST_PRINT,
   INST_NEGATE,
-  INST_ASSIGN,
+  INST_DEFINE,
   INST_VAR,
   INST_EOF
 } Inst_t;
@@ -62,9 +62,9 @@ typedef struct {
   (Inst) { .type = INST_DIV }
 #define MAKE_NEGATE                                                            \
   (Inst) { .type = INST_NEGATE }
-#define MAKE_ASSIGN(label)                                                     \
+#define MAKE_DEFINE(label)                                                     \
   (Inst) {                                                                     \
-    .type = INST_ASSIGN, .operand = {.as_sv = label }                          \
+    .type = INST_DEFINE, .operand = {.as_sv = label }                          \
   }
 #define MAKE_VAR(label)                                                        \
   (Inst) {                                                                     \
