@@ -136,23 +136,24 @@ void vm_execute(void) {
     case INST_ASSIGN:
       assert(vm.stack_count > 0 && "Stack underflow");
 
-      char *label = inst.operand.as_str;
-      assert(hash_table_keys_contains(&vm.env, label) == 0 &&
+      char *assign_label = inst.operand.as_str;
+      assert(hash_table_keys_contains(&vm.env, assign_label) == 0 &&
              "Redefinition of var");
 
       void *value = (void *)(&vm.stack[vm.stack_count - 1]);
       vm.stack_count--;
 
-      hash_table_insert(&vm.env, label, value);
+      hash_table_insert(&vm.env, assign_label, value);
       continue;
 
     case INST_VAR:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
       char *var_label = inst.operand.as_str;
-      assert(hash_table_keys_contains(&vm.env, label) == 1 && "Undefined var");
+      assert(hash_table_keys_contains(&vm.env, var_label) == 1 &&
+             "Undefined var");
 
-      vm.stack[vm.stack_count++] = vm_env_resolve(label);
+      vm.stack[vm.stack_count++] = vm_env_resolve(var_label);
       continue;
 
     case INST_EOF:

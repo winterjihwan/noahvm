@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-inline HashTable hash_table_new(void) {
-  HashTable ht = {0};
+inline Hash_Table hash_table_new(void) {
+  Hash_Table ht = {0};
 
   return ht;
 }
@@ -20,11 +20,11 @@ inline static HashKey hash_table_key_hash(const char *raw_key) {
   return key;
 }
 
-inline static void hash_table_keys_insert(HashTable *ht, HashKey *key) {
+inline static void hash_table_keys_insert(Hash_Table *ht, HashKey *key) {
   ht->keys[ht->keys_count++] = key;
 }
 
-void hash_table_insert(HashTable *ht, const char *key_str, void *const data) {
+void hash_table_insert(Hash_Table *ht, const char *key_str, void *const data) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
@@ -52,7 +52,7 @@ void hash_table_insert(HashTable *ht, const char *key_str, void *const data) {
   }
 }
 
-void **hash_table_get(HashTable *ht, const char *key_str) {
+void **hash_table_get(Hash_Table *ht, const char *key_str) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
@@ -81,7 +81,7 @@ void **hash_table_get(HashTable *ht, const char *key_str) {
   }
 }
 
-int hash_table_keys_contains(HashTable *ht, char *key_str) {
+int hash_table_keys_contains(Hash_Table *ht, char *key_str) {
   HashKey key = hash_table_key_hash(key_str);
 
   for (size_t i = 0; i < ht->keys_count; i++) {
@@ -93,7 +93,7 @@ int hash_table_keys_contains(HashTable *ht, char *key_str) {
   return 0;
 }
 
-inline static void hash_table_keys_delete(HashTable *ht, HashKey *key) {
+inline static void hash_table_keys_delete(Hash_Table *ht, HashKey *key) {
   size_t i = 0;
   for (i = 0; i < ht->keys_count; i++) {
     if (ht->keys[i] == key) {
@@ -109,7 +109,7 @@ merge:
   ht->keys_count--;
 }
 
-void hash_table_delete(HashTable *ht, const char *key_str) {
+void hash_table_delete(Hash_Table *ht, const char *key_str) {
   HashKey key = hash_table_key_hash(key_str);
   HashKey key_mod = key % HASH_TABLE_CAP;
 
@@ -156,7 +156,7 @@ void hash_table_delete(HashTable *ht, const char *key_str) {
   }
 }
 
-void hash_table_destruct(HashTable *ht) {
+void hash_table_destruct(Hash_Table *ht) {
   for (size_t i = 0; i < HASH_TABLE_CAP; i++) {
     Bucket *bucket = ht->nodes[i];
 

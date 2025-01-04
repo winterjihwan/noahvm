@@ -8,27 +8,25 @@
 #include "lexer.h"
 #include "vm.h"
 
-// Resolve to AST
+static uint64_t tokens_pos = 0;
+static Ir ir = {0};
 
-Compiler compiler = {0};
-
-void compiler_init(void) {
-  compiler.tokens_pos = 0;
-  compiler.insts_count = 0;
+void compiler_init(Compiler *compiler) {
+  compiler->ir = &ir;
+  compiler->name = "main";
 }
 
-void compiler_load_tokens(Token *tokens, size_t tokens_count) {
-  for (size_t i = 0; i < tokens_count; i++) {
-    compiler.tokens[i] = tokens[i];
-  }
-}
-
-inline static void compiler_expr_print(void) {
-  compiler.insts[compiler.insts_count++] = (Inst){
+static void compiler_expr_print(Compiler *compiler) {
+  compiler->ir->insts[compiler->ir->insts_count++] = (Inst){
       .type = INST_PRINT,
   };
 
-  compiler.insts_count = 0;
+  compiler->ir->insts_count = 0;
+}
+
+void compiler_dump(Compiler *compiler) {
+  printf("%s:\n", compiler->name);
+  printf("\tscope: %d\n", compiler->scope);
 }
 
 #define PRATT_TABLE_CAP 16
@@ -80,7 +78,7 @@ inline static int compiler_token_ignore_emit(Token_t type) {
   return 0;
 }
 
-inline static Inst compiler_translate_op(Token_t type) {
+static Inst compiler_translate_op(Token_t type) {
   switch (type) {
   case Token_Plus:
     return MAKE_PLUS;
@@ -102,16 +100,16 @@ inline static int compiler_str_view_to_num(char *str, int len) {
   return strtol(buf, NULL, 10);
 }
 
-#define NEXT_TOKEN &compiler.tokens[compiler.tokens_pos++]
-#define PEEK_TOKEN &compiler.tokens[compiler.tokens_pos]
+#define NEXT_TOKEN &tokens[tokens_pos++]
+#define PEEK_TOKEN &tokens[tokens_pos]
 #define PUSH_INST(inst)                                                        \
   do {                                                                         \
-    compiler.insts[compiler.insts_count++] = inst;                             \
+    compiler->ir->insts[compiler->ir->insts_count++] = inst;                   \
   } while (0)
 #define MUNCH_TOKEN(token_type)                                                \
   do {                                                                         \
     if (*PEEK_TOKEN.type == token_type) {                                      \
-      compiler.tokens_pos++;                                                   \
+      tokens_pos++;                                                            \
     } else {                                                                   \
       fprintf(stderr, "Expected token type %s",                                \
               lexer_token_t_to_str(token_type));                               \
@@ -119,17 +117,18 @@ inline static int compiler_str_view_to_num(char *str, int len) {
     }                                                                          \
   } while (0)
 
-static void compiler_expr_bp(uint8_t min_bp) {
+static void compiler_expr_bp(Compiler *compiler, Token *tokens,
+                             uint8_t min_bp) {
   Token *lhs = NEXT_TOKEN;
 
   int lhs_is_pre_op = compiler_token_is_pre_op(lhs->type);
   if (lhs_is_pre_op) {
     uint8_t pre_bp = compiler_pre_power_get(lhs->type);
-    compiler_expr_bp(pre_bp);
+    compiler_expr_bp(compiler, tokens, pre_bp);
 
     PUSH_INST(MAKE_NEGATE);
   } else if (lhs->type == Token_LParen) {
-    compiler_expr_bp(0);
+    compiler_expr_bp(compiler, tokens, 0);
 
     MUNCH_TOKEN(Token_RParen);
   }
@@ -152,25 +151,76 @@ static void compiler_expr_bp(uint8_t min_bp) {
       break;
     }
 
-    compiler.tokens_pos++;
-    compiler_expr_bp(in_bp);
+    tokens_pos++;
+    compiler_expr_bp(compiler, tokens, in_bp);
 
     PUSH_INST(compiler_translate_op(op->type));
   }
 }
 
-static void compiler_expr(void) {
+static void compiler_expr(Compiler *compiler, Token *tokens) {
   Token *token = PEEK_TOKEN;
 
+  // Native fn
   if (token->type == Token_Print) {
-    compiler_expr_print();
+    compiler_expr_print(compiler);
   } else {
-    compiler_expr_bp(0);
+    compiler_expr_bp(compiler, tokens, 0);
   }
 }
 
-void compiler_compile(void) {
-  compiler_expr();
+static void compiler_expr_stmt(Compiler *compiler, Token *tokens) {
+  Token *token = PEEK_TOKEN;
+
+  if (token->type == Token_Print) {
+    compiler_expr_print(compiler);
+  } else {
+    compiler_expr_bp(compiler, tokens, 0);
+  }
+}
+
+inline static int compiler_token_is_type(Token *token) {
+  if (token->type == Token_Int || token->type == Token_Str) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static void compiler_assign(Compiler *compiler, Token *tokens) {
+  Token *type = NEXT_TOKEN;
+
+  if (*PEEK_TOKEN.type != Token_Identifier) {
+    fprintf(stderr, "Expected identifier");
+  }
+
+  Token *identifier = NEXT_TOKEN;
+  Sv label = (Sv){
+      .str = identifier->start,
+      .len = identifier->len,
+  };
+
+  MUNCH_TOKEN(Token_Equal);
+
+  compiler_expr(compiler, tokens);
+
+  if (compiler->scope == 0) {
+    // global
+    PUSH_INST(MAKE_ASSIGN("Hello"));
+  }
+}
+
+static void compiler_stmt(Compiler *compiler, Token *tokens) {
+  if (compiler_token_is_type(PEEK_TOKEN)) {
+    compiler_assign(compiler, tokens);
+  } else {
+    compiler_expr_stmt(compiler, tokens);
+  };
+}
+
+void compiler_compile(Compiler *compiler, Token *tokens) {
+  compiler_stmt(compiler, tokens);
+  /*compiler_expr(compiler, tokens);*/
   PUSH_INST(MAKE_EOF);
 }
 

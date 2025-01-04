@@ -48,48 +48,47 @@ extern Lexer lexer;
 extern Compiler compiler;
 extern Vm vm;
 
-int main(void) {
-#define INST_COUNT 6
+// int main(void) {
+// #define INST_COUNT 6
+//
+//   Inst program[INST_COUNT] = {
+//       MAKE_PUSH(3),     MAKE_PUSH(3),  MAKE_PLUS,
+//       MAKE_ASSIGN("a"), MAKE_VAR("a"), MAKE_EOF,
+//   };
+//
+//   vm_init();
+//   vm_program_load_from_memory(program, INST_COUNT);
+//   vm_program_dump();
+//   vm_execute();
+//   vm_stack_dump();
+//
+// #undef INST_COUNT
+// }
 
-  Inst program[INST_COUNT] = {
-      MAKE_PUSH(3),     MAKE_PUSH(3),  MAKE_PLUS,
-      MAKE_ASSIGN("a"), MAKE_VAR("a"), MAKE_EOF,
-  };
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    fprintf(stderr, "USAGE: ./main <file.c>");
+    exit(1);
+  }
+
+  char *code_path = argv[1];
+
+  char code[CODE_CAP] = {0};
+  load_code_from_file(code_path, code);
+
+  printf("Code: %s\n", code);
+
+  lexer_init_with_code(code);
+  lexer_lex();
+  lexer_tokens_dump(lexer.tokens);
+
+  Compiler compiler;
+  compiler_init(&compiler);
+  compiler_compile(&compiler, lexer.tokens);
 
   vm_init();
-  vm_program_load_from_memory(program, INST_COUNT);
+  vm_program_load_from_memory(compiler.ir->insts, compiler.ir->insts_count);
   vm_program_dump();
   vm_execute();
   vm_stack_dump();
-
-#undef INST_COUNT
 }
-
-// int main_2(int argc, char **argv) {
-//   if (argc != 2) {
-//     fprintf(stderr, "USAGE: ./main <file.c>");
-//     exit(1);
-//   }
-//
-//   char *code_path = argv[1];
-//
-//   char code[CODE_CAP] = {0};
-//   load_code_from_file(code_path, code);
-//
-//   printf("Code: %s\n", code);
-//
-//   lexer_init_with_code(code);
-//   lexer_lex();
-//   lexer_tokens_dump(lexer.tokens);
-//
-//   compiler_init();
-//   compiler_load_tokens(lexer.tokens, lexer.tokens_count);
-//   compiler_compile();
-//
-//   vm_init();
-//   vm_program_load_from_memory(compiler.insts, compiler.insts_count);
-//   vm_program_dump();
-//   vm_stack_dump();
-//   vm_execute();
-//   vm_stack_dump();
-// }

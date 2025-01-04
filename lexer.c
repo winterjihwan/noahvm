@@ -241,6 +241,8 @@ char *lexer_token_t_to_str(const Token_t type) {
     return "Token_Fn";
   case Token_Int:
     return "Token_Int";
+  case Token_Str:
+    return "Token_Str";
   case Token_Long:
     return "Token_Long";
   case Token_Return:

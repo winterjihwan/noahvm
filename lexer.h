@@ -14,6 +14,7 @@ typedef enum {
   Token_Comma,
   Token_Fn,
   Token_Int,
+  Token_Str,
   Token_Long,
   Token_Return,
   Token_Print,

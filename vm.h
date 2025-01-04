@@ -45,7 +45,7 @@ typedef struct {
   Word stack[VM_STACK_CAP];
   uint64_t stack_count;
 
-  HashTable env;
+  Hash_Table env;
 } Vm;
 
 #define MAKE_PUSH(val)                                                         \
