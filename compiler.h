@@ -25,8 +25,6 @@ typedef struct {
 typedef struct {
   uint64_t label_pos;
   Sv label;
-
-  Sv params[UINT8_MAX];
   uint8_t arity;
 } Fn;
 

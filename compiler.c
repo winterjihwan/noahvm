@@ -221,12 +221,12 @@ static void compiler_stmt_assign(Compiler *compiler, Token *tokens, Sv name) {
   compiler_expr(compiler, tokens);
 
   if (compiler->depth == 0) {
+
     PUSH_INST(MAKE_DEF_GLOBAL(name));
   } else {
-    LOCAL_ADD(name, compiler->depth);
 
-    int offset = compiler_var_resolve(compiler, &name);
-    PUSH_INST(MAKE_DEF_LOCAL(offset));
+    LOCAL_ADD(name, compiler->depth);
+    PUSH_INST(MAKE_DEF_LOCAL(compiler->locals_count - 1));
   }
 
   PUSH_INST(MAKE_POP);
@@ -282,7 +282,7 @@ static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
   EXIT_SCOPE;
 }
 
-static Compiler *compiler_new(Compiler *compiler, Sv name) {
+static Compiler *compiler_call_new(Compiler *compiler, Sv name) {
   Compiler *new_fn = (Compiler *)malloc(sizeof(Compiler));
   new_fn->depth = compiler->depth + 1;
   new_fn->name = name;
@@ -292,13 +292,21 @@ static Compiler *compiler_new(Compiler *compiler, Sv name) {
   return new_fn;
 }
 
-#define FN_DEF(_label, _label_pos, _arity, _params)                            \
+static void compiler_call_destruct(Compiler *compiler) {
+  if (compiler->enclosing == NULL) {
+    fprintf(stderr, "Enclosing compiler null");
+    exit(8);
+  }
+
+  free(compiler);
+}
+
+#define FN_DEF(_label, _label_pos, _arity)                                     \
   do {                                                                         \
     compiler->fn[compiler->fn_count++] = (Fn){                                 \
         .label = _label,                                                       \
         .label_pos = _label_pos,                                               \
         .arity = _arity,                                                       \
-        .params = _params,                                                     \
     };                                                                         \
   } while (0);
 
@@ -315,11 +323,10 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   PUSH_INST(MAKE_JMP_ABS(-1));
 
   uint64_t label_start_pos = compiler->ir->insts_count;
+  uint64_t params_count = 0;
 
   MUNCH_TOKEN(Token_LParen);
 
-  Sv params[UINT8_MAX];
-  uint8_t params_count = 0;
   while (1) {
     // TODO: Type checking
     Token *next = NEXT_TOKEN;
@@ -330,10 +337,7 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
     EXPECT_TOKEN(Token_Identifier);
     Token *identifier = NEXT_TOKEN;
 
-    params[params_count++] = (Sv){
-        .len = identifier->len,
-        .str = identifier->start,
-    };
+    PUSH_INST(MAKE_DEF_LOCAL(params_count++));
 
     if (*PEEK_TOKEN.type == Token_RParen)
       break;
@@ -341,15 +345,62 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
     MUNCH_TOKEN(Token_Comma);
   }
 
-  FN_DEF(label, label_start_pos, params_count - 1, *params);
+  for (size_t i = 0; i < params_count; i++) {
+    PUSH_INST(MAKE_POP);
+  }
+
+  FN_DEF(label, label_start_pos, params_count);
 
   compiler_stmt_block(compiler, tokens);
+
+  PUSH_INST(MAKE_RET);
 
   uint64_t label_end_pos = compiler->ir->insts_count;
   ALTER_INST(label_start_pos - 1, MAKE_JMP_ABS(label_end_pos));
 }
 
-static void compiler_stmt_call(Compiler *compiler, Token *tokens) {}
+static Fn *compiler_fn_resolve(Compiler *compiler, Sv *label) {
+  for (size_t i = 0; i < compiler->fn_count; i++) {
+    Fn *fn = &compiler->fn[i];
+
+    if (fn->label.len == label->len) {
+      if (memcmp(fn->label.str, label->str, label->len) == 0) {
+        return fn;
+      }
+    }
+  }
+
+  fprintf(stderr, "Unknown Fn %.*s", label->len, label->str);
+  exit(9);
+}
+
+static void compiler_stmt_call(Compiler *compiler, Token *tokens, Sv label) {
+  Compiler *new_compiler = compiler_call_new(compiler, label);
+
+  Fn *fn = compiler_fn_resolve(compiler, &label);
+  uint8_t arity = fn->arity;
+
+  MUNCH_TOKEN(Token_LParen);
+
+  while (1) {
+    if (arity-- == 0) {
+      break;
+    }
+
+    compiler_expr(compiler, tokens);
+
+    MUNCH_TOKEN(Token_Comma);
+  }
+
+  uint64_t ra = compiler->ir->insts_count + 2;
+  PUSH_INST(MAKE_SET_RA(ra));
+  PUSH_INST(MAKE_JMP_ABS(fn->label_pos));
+
+  compiler_call_destruct(new_compiler);
+
+  MUNCH_TOKEN(Token_RParen);
+  MUNCH_TOKEN(Token_Semicolon);
+}
 
 static void compiler_stmt_var(Compiler *compiler, Token *tokens) {
   Token *identifier = NEXT_TOKEN;
@@ -368,7 +419,7 @@ static void compiler_stmt_var(Compiler *compiler, Token *tokens) {
   if (peek->type == Token_Equal) {
     compiler_stmt_assign(compiler, tokens, name);
   } else if (peek->type == Token_LParen) {
-    compiler_stmt_call(compiler, tokens);
+    compiler_stmt_call(compiler, tokens, name);
   }
 }
 

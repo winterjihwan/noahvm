@@ -20,7 +20,9 @@ typedef enum {
   INST_VAR_GLOBAL,
   INST_VAR_LOCAL,
   INST_JMP_ABS,
-  INST_EOF
+  INST_RET,
+  INST_SET_RA,
+  INST_EOF,
 } Inst_t;
 
 typedef struct {
@@ -47,6 +49,8 @@ typedef struct {
   uint64_t stack_count;
 
   Hash_Table env;
+
+  uint64_t Reg_RA;
 } Vm;
 
 #define MAKE_PUSH(word)                                                        \
@@ -86,6 +90,12 @@ typedef struct {
 #define MAKE_JMP_ABS(offset)                                                   \
   (Inst) {                                                                     \
     .type = INST_JMP_ABS, .operand = {.as_u64 = offset }                       \
+  }
+#define MAKE_RET                                                               \
+  (Inst) { .type = INST_RET }
+#define MAKE_SET_RA(ra)                                                        \
+  (Inst) {                                                                     \
+    .type = INST_SET_RA, .operand = {.as_u64 = ra }                            \
   }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }

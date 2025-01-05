@@ -2,3 +2,11 @@ fn a(){
 	int a = 3;
 	print a;
 }
+
+fn b(){
+	int b = 43;
+	print b - 34;
+}
+
+a();
+b();

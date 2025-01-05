@@ -57,6 +57,10 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "var_local";
   case INST_JMP_ABS:
     return "jmp_abs";
+  case INST_RET:
+    return "ret";
+  case INST_SET_RA:
+    return "set_ra";
   case INST_EOF:
     return "eof";
   default:
@@ -127,6 +131,15 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
             .has_operand = 1,
             .operand_type = WORD_U64,
         },
+    [INST_RET] =
+        {
+            .has_operand = 0,
+        },
+    [INST_SET_RA] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_U64,
+        },
     [INST_EOF] =
         {
             .has_operand = 0,
@@ -176,9 +189,13 @@ void vm_program_dump(void) {
 Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 
 void vm_execute(void) {
-  while (1) {
+  int end = 30;
+  while (end-- != 0) {
     const Inst inst = vm.program[vm.ip++];
     Word word_one;
+
+    /*vm_stack_dump();*/
+    /*printf("Inst: %s\n", vm_inst_t_to_str(inst.type));*/
 
     switch (inst.type) {
     case INST_PUSH:
@@ -288,6 +305,16 @@ void vm_execute(void) {
       assert(jmp_offset < vm.program_size && "Program illegal access");
 
       vm.ip = jmp_offset;
+      continue;
+
+    case INST_RET:
+      vm.ip = vm.Reg_RA;
+
+      continue;
+
+    case INST_SET_RA:
+      vm.Reg_RA = inst.operand.as_u64;
+
       continue;
 
     case INST_EOF:
