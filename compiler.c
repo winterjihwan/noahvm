@@ -23,6 +23,16 @@ void compiler_init(Compiler *compiler) {
   compiler->enclosing = NULL;
 }
 
+static void compiler_locals_dump(Compiler *compiler) {
+  printf("Locals: \n");
+  for (size_t i = 0; i < compiler->locals_count; i++) {
+    Local *local = &compiler->locals[i];
+
+    printf("%.*s:\n", local->name.len, local->name.str);
+    printf("\tdepth: %d\n", local->depth);
+  }
+}
+
 void compiler_dump(Compiler *compiler) {
   printf("%.*s:\n", compiler->name.len, compiler->name.str);
   printf("\tdepth: %d\n", compiler->depth);
@@ -221,10 +231,9 @@ static void compiler_stmt_assign(Compiler *compiler, Token *tokens, Sv name) {
   compiler_expr(compiler, tokens);
 
   if (compiler->depth == 0) {
-
     PUSH_INST(MAKE_DEF_GLOBAL(name));
-  } else {
 
+  } else {
     LOCAL_ADD(name, compiler->depth);
     PUSH_INST(MAKE_DEF_LOCAL(compiler->locals_count - 1));
   }
@@ -288,6 +297,7 @@ static Compiler *compiler_call_new(Compiler *compiler, Sv name) {
   new_fn->name = name;
   new_fn->locals_count = 0;
   new_fn->enclosing = compiler;
+  new_fn->ir = compiler->ir;
 
   return new_fn;
 }
@@ -301,14 +311,15 @@ static void compiler_call_destruct(Compiler *compiler) {
   free(compiler);
 }
 
-#define FN_DEF(_label, _label_pos, _arity)                                     \
+#define FN_DECLARE(_label, _label_pos, _arity)                                 \
   do {                                                                         \
     compiler->fn[compiler->fn_count++] = (Fn){                                 \
         .label = _label,                                                       \
         .label_pos = _label_pos,                                               \
-        .arity = _arity,                                                       \
+        .arity = arity,                                                        \
     };                                                                         \
   } while (0);
+#define FN_CURR &compiler->fn[compiler->fn_count - 1]
 
 static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_Fn);
@@ -322,36 +333,48 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
 
   PUSH_INST(MAKE_JMP_ABS(-1));
 
+  uint8_t locals_count_prev = compiler->locals_count;
   uint64_t label_start_pos = compiler->ir->insts_count;
-  uint64_t params_count = 0;
+  uint8_t arity = 0;
 
   MUNCH_TOKEN(Token_LParen);
-
   while (1) {
+    if (*PEEK_TOKEN.type == Token_RParen)
+      break;
+
     // TODO: Type checking
     Token *next = NEXT_TOKEN;
 
-    if (next->type == Token_RParen)
-      break;
-
     EXPECT_TOKEN(Token_Identifier);
     Token *identifier = NEXT_TOKEN;
+    Sv name = (Sv){
+        .len = identifier->len,
+        .str = identifier->start,
+    };
 
-    PUSH_INST(MAKE_DEF_LOCAL(params_count++));
+    PUSH_INST(MAKE_DEF_LOCAL(arity));
+    LOCAL_ADD(name, compiler->depth);
+    arity++;
 
     if (*PEEK_TOKEN.type == Token_RParen)
       break;
 
     MUNCH_TOKEN(Token_Comma);
   }
+  MUNCH_TOKEN(Token_RParen);
 
-  for (size_t i = 0; i < params_count; i++) {
+  FN_DECLARE(label, label_start_pos, arity);
+
+  for (size_t i = 0; i < arity; i++) {
     PUSH_INST(MAKE_POP);
   }
 
-  FN_DEF(label, label_start_pos, params_count);
-
   compiler_stmt_block(compiler, tokens);
+
+  for (size_t i = 0; i < compiler->locals_count - locals_count_prev; i++) {
+    PUSH_INST(MAKE_POP);
+  }
+  compiler->locals_count = locals_count_prev;
 
   PUSH_INST(MAKE_RET);
 
@@ -383,12 +406,21 @@ static void compiler_stmt_call(Compiler *compiler, Token *tokens, Sv label) {
   MUNCH_TOKEN(Token_LParen);
 
   while (1) {
-    if (arity-- == 0) {
+    if (arity == 0) {
       break;
     }
 
     compiler_expr(compiler, tokens);
 
+    if (--arity == 0) {
+      break;
+    }
+
+    if (*PEEK_TOKEN.type != Token_Comma) {
+      fprintf(stderr, "Expected %d arguments for Fn %.*s\n", fn->arity,
+              label.len, label.str);
+      exit(11);
+    }
     MUNCH_TOKEN(Token_Comma);
   }
 
@@ -472,3 +504,4 @@ void compiler_compile(Compiler *compiler, Token *tokens) {
 #undef EXIT_SCOPE
 
 #undef FN_DEF
+#undef FN_CURR

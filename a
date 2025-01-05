@@ -1,5 +1,4 @@
-fn a(){
-	int a = 3;
+fn a(int a, int b){
 	print a;
 }
 
@@ -8,5 +7,5 @@ fn b(){
 	print b - 34;
 }
 
-a();
+a(30, 20);
 b();

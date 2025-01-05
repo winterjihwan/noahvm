@@ -211,6 +211,9 @@ void lexer_lex(void) {
     case '}':
       lexer_lex_token(Token_RBrace, 1);
       continue;
+    case ',':
+      lexer_lex_token(Token_Comma, 1);
+      continue;
     case '+':
       lexer_lex_token(Token_Plus, 1);
       continue;
