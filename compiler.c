@@ -7,6 +7,7 @@
 
 #include "compiler.h"
 #include "lexer.h"
+#include "table.h"
 #include "vm.h"
 
 static uint64_t tokens_pos = 0;
@@ -14,13 +15,16 @@ static Ir ir = {0};
 
 void compiler_init(Compiler *compiler) {
   compiler->ir = &ir;
-  compiler->name = "main";
+  compiler->name = (Sv){
+      .len = 4,
+      .str = "main",
+  };
   compiler->depth = 0;
   compiler->enclosing = NULL;
 }
 
 void compiler_dump(Compiler *compiler) {
-  printf("%s:\n", compiler->name);
+  printf("%.*s:\n", compiler->name.len, compiler->name.str);
   printf("\tdepth: %d\n", compiler->depth);
 }
 
@@ -86,6 +90,10 @@ inline static uint64_t compiler_sv_to_f64(char *str, int len) {
 #define PUSH_INST(inst)                                                        \
   do {                                                                         \
     compiler->ir->insts[compiler->ir->insts_count++] = inst;                   \
+  } while (0)
+#define ALTER_INST(offset, inst)                                               \
+  do {                                                                         \
+    compiler->ir->insts[offset] = inst;                                        \
   } while (0)
 #define MUNCH_TOKEN(token_type)                                                \
   do {                                                                         \
@@ -207,22 +215,10 @@ static void compiler_expr_stmt(Compiler *compiler, Token *tokens) {
     }                                                                          \
   } while (0)
 
-static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
-  Token *identifier = NEXT_TOKEN;
-
-  if (*PEEK_TOKEN.type == Token_Semicolon) {
-    MUNCH_TOKEN(Token_Semicolon);
-    return;
-  }
-
+static void compiler_stmt_assign(Compiler *compiler, Token *tokens, Sv name) {
   MUNCH_TOKEN(Token_Equal);
 
   compiler_expr(compiler, tokens);
-
-  Sv name = (Sv){
-      .str = identifier->start,
-      .len = identifier->len,
-  };
 
   if (compiler->depth == 0) {
     PUSH_INST(MAKE_DEF_GLOBAL(name));
@@ -242,15 +238,32 @@ static void compiler_stmt_define(Compiler *compiler, Token *tokens) {
   Token *type = NEXT_TOKEN;
 
   EXPECT_TOKEN(Token_Identifier);
+  Token *identifier = NEXT_TOKEN;
 
-  compiler_stmt_assign(compiler, tokens);
+  Sv name = (Sv){
+      .str = identifier->start,
+      .len = identifier->len,
+  };
+
+  compiler_stmt_assign(compiler, tokens, name);
 }
 
 static void compiler_stmt(Compiler *compiler, Token *tokens);
 
+#define ENTER_SCOPE                                                            \
+  do {                                                                         \
+    MUNCH_TOKEN(Token_LBrace);                                                 \
+    compiler->depth++;                                                         \
+  } while (0)
+#define EXIT_SCOPE                                                             \
+  do {                                                                         \
+    compiler->locals_count = locals_count_prev;                                \
+    compiler->depth--;                                                         \
+    MUNCH_TOKEN(Token_RBrace);                                                 \
+  } while (0)
+
 static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
-  MUNCH_TOKEN(Token_LBrace);
-  compiler->depth++;
+  ENTER_SCOPE;
 
   uint8_t locals_count_prev = compiler->locals_count;
 
@@ -266,9 +279,97 @@ static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
     PUSH_INST(MAKE_POP);
   }
 
-  compiler->locals_count = locals_count_prev;
-  compiler->depth--;
-  MUNCH_TOKEN(Token_RBrace);
+  EXIT_SCOPE;
+}
+
+static Compiler *compiler_new(Compiler *compiler, Sv name) {
+  Compiler *new_fn = (Compiler *)malloc(sizeof(Compiler));
+  new_fn->depth = compiler->depth + 1;
+  new_fn->name = name;
+  new_fn->locals_count = 0;
+  new_fn->enclosing = compiler;
+
+  return new_fn;
+}
+
+#define FN_DEF(_label, _label_pos, _arity, _params)                            \
+  do {                                                                         \
+    compiler->fn[compiler->fn_count++] = (Fn){                                 \
+        .label = _label,                                                       \
+        .label_pos = _label_pos,                                               \
+        .arity = _arity,                                                       \
+        .params = _params,                                                     \
+    };                                                                         \
+  } while (0);
+
+static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
+  MUNCH_TOKEN(Token_Fn);
+
+  EXPECT_TOKEN(Token_Identifier);
+  Token *identifier = NEXT_TOKEN;
+  Sv label = (Sv){
+      .str = identifier->start,
+      .len = identifier->len,
+  };
+
+  PUSH_INST(MAKE_JMP_ABS(-1));
+
+  uint64_t label_start_pos = compiler->ir->insts_count;
+
+  MUNCH_TOKEN(Token_LParen);
+
+  Sv params[UINT8_MAX];
+  uint8_t params_count = 0;
+  while (1) {
+    // TODO: Type checking
+    Token *next = NEXT_TOKEN;
+
+    if (next->type == Token_RParen)
+      break;
+
+    EXPECT_TOKEN(Token_Identifier);
+    Token *identifier = NEXT_TOKEN;
+
+    params[params_count++] = (Sv){
+        .len = identifier->len,
+        .str = identifier->start,
+    };
+
+    if (*PEEK_TOKEN.type == Token_RParen)
+      break;
+
+    MUNCH_TOKEN(Token_Comma);
+  }
+
+  FN_DEF(label, label_start_pos, params_count - 1, *params);
+
+  compiler_stmt_block(compiler, tokens);
+
+  uint64_t label_end_pos = compiler->ir->insts_count;
+  ALTER_INST(label_start_pos - 1, MAKE_JMP_ABS(label_end_pos));
+}
+
+static void compiler_stmt_call(Compiler *compiler, Token *tokens) {}
+
+static void compiler_stmt_var(Compiler *compiler, Token *tokens) {
+  Token *identifier = NEXT_TOKEN;
+
+  Sv name = (Sv){
+      .str = identifier->start,
+      .len = identifier->len,
+  };
+
+  if (*PEEK_TOKEN.type == Token_Semicolon) {
+    MUNCH_TOKEN(Token_Semicolon);
+    return;
+  }
+
+  Token *peek = PEEK_TOKEN;
+  if (peek->type == Token_Equal) {
+    compiler_stmt_assign(compiler, tokens, name);
+  } else if (peek->type == Token_LParen) {
+    compiler_stmt_call(compiler, tokens);
+  }
 }
 
 static void compiler_stmt(Compiler *compiler, Token *tokens) {
@@ -278,13 +379,16 @@ static void compiler_stmt(Compiler *compiler, Token *tokens) {
     compiler_stmt_define(compiler, tokens);
 
   } else if (peek->type == Token_Identifier) {
-    compiler_stmt_assign(compiler, tokens);
+    compiler_stmt_var(compiler, tokens);
 
   } else if (peek->type == Token_Print) {
     compiler_stmt_print(compiler, tokens);
 
   } else if (peek->type == Token_LBrace) {
     compiler_stmt_block(compiler, tokens);
+
+  } else if (peek->type == Token_Fn) {
+    compiler_stmt_fn(compiler, tokens);
 
   } else {
     compiler_expr_stmt(compiler, tokens);
@@ -307,7 +411,13 @@ void compiler_compile(Compiler *compiler, Token *tokens) {
 #undef NEXT_TOKEN
 #undef MUNCH_TOKEN
 #undef PUSH_INST
+#undef ALTER_INST
 #undef POP_INST
 
 #undef LOCAL_ADD
 #undef EXPECT_TOKEN
+
+#undef ENTER_SCOPE
+#undef EXIT_SCOPE
+
+#undef FN_DEF

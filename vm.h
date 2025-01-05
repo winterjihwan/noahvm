@@ -19,6 +19,7 @@ typedef enum {
   INST_DEF_LOCAL,
   INST_VAR_GLOBAL,
   INST_VAR_LOCAL,
+  INST_JMP_ABS,
   INST_EOF
 } Inst_t;
 
@@ -82,6 +83,10 @@ typedef struct {
   }
 #define MAKE_PRINT                                                             \
   (Inst) { .type = INST_PRINT }
+#define MAKE_JMP_ABS(offset)                                                   \
+  (Inst) {                                                                     \
+    .type = INST_JMP_ABS, .operand = {.as_u64 = offset }                       \
+  }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }
 

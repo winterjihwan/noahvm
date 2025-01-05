@@ -8,6 +8,7 @@
 
 #define LOCAL_ENV_CAP 255
 #define SCOPE_CONTEXT_CAP 255
+#define FN_CAP 255
 
 typedef struct {
   Inst insts[PROGRAM_STACK_CAP];
@@ -21,16 +22,27 @@ typedef struct {
   uint8_t depth;
 } Local;
 
+typedef struct {
+  uint64_t label_pos;
+  Sv label;
+
+  Sv params[UINT8_MAX];
+  uint8_t arity;
+} Fn;
+
 struct Compiler {
   Compiler *enclosing;
 
   Ir *ir;
 
-  char *name;
+  Sv name;
   uint8_t depth;
 
   Local locals[LOCAL_ENV_CAP];
   uint8_t locals_count;
+
+  Fn fn[FN_CAP];
+  uint8_t fn_count;
 };
 
 typedef enum {

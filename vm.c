@@ -55,6 +55,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "var_global";
   case INST_VAR_LOCAL:
     return "var_local";
+  case INST_JMP_ABS:
+    return "jmp_abs";
   case INST_EOF:
     return "eof";
   default:
@@ -116,6 +118,11 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
             .operand_type = WORD_SV,
         },
     [INST_VAR_LOCAL] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_U64,
+        },
+    [INST_JMP_ABS] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
@@ -270,10 +277,17 @@ void vm_execute(void) {
     case INST_VAR_LOCAL:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
-      uint64_t var_offset = (int)inst.operand.as_u64;
+      uint64_t var_offset = inst.operand.as_u64;
       assert(var_offset < vm.stack_count && "Stack illegal access");
 
       vm.stack[vm.stack_count++] = vm.stack[var_offset];
+      continue;
+
+    case INST_JMP_ABS:;
+      uint64_t jmp_offset = inst.operand.as_u64;
+      assert(jmp_offset < vm.program_size && "Program illegal access");
+
+      vm.ip = jmp_offset;
       continue;
 
     case INST_EOF:
