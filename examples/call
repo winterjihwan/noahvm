@@ -1,0 +1,15 @@
+fn a(int a, int b){
+	print a;
+	
+	return;
+}
+
+fn b(){
+	int b = 43;
+	print b - 34;
+
+	return;
+}
+
+a(30, 20);
+b();

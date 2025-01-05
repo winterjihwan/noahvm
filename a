@@ -1,11 +1,8 @@
-fn a(int a, int b){
+fn a(){
+	int a = 3;
+	int b = 3;
 	print a;
+	return;
 }
 
-fn b(){
-	int b = 43;
-	print b - 34;
-}
-
-a(30, 20);
-b();
+a();

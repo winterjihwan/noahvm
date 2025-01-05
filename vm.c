@@ -194,8 +194,8 @@ void vm_execute(void) {
     const Inst inst = vm.program[vm.ip++];
     Word word_one;
 
-    /*vm_stack_dump();*/
-    /*printf("Inst: %s\n", vm_inst_t_to_str(inst.type));*/
+    vm_stack_dump();
+    printf("Inst: %s\n", vm_inst_t_to_str(inst.type));
 
     switch (inst.type) {
     case INST_PUSH:
@@ -273,7 +273,8 @@ void vm_execute(void) {
     case INST_DEF_LOCAL:
       assert(vm.stack_count > 0 && "Stack underflow");
 
-      uint64_t def_offset = (int)inst.operand.as_u64;
+      uint64_t def_offset = inst.operand.as_u64;
+      printf("Def offset: %d\n", (int)def_offset);
       assert(def_offset < vm.stack_count && "Stack illegal access");
 
       Word word = vm.stack[def_offset];
