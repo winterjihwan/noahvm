@@ -7,6 +7,7 @@ typedef enum {
   Token_RParen,
   Token_Identifier,
   Token_Number,
+  Token_Float,
   Token_LBracket,
   Token_RBracket,
   Token_LBrace,

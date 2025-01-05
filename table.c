@@ -91,6 +91,8 @@ inline static void hash_table_keys_delete(Hash_Table *ht, HashKey key) {
     }
   }
 
+  return;
+
 merge:
   for (size_t j = i; j < ht->keys_count - 1; j++) {
     ht->keys[j] = ht->keys[j + 1];

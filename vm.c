@@ -35,6 +35,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "pop";
   case INST_PLUS:
     return "plus";
+  case INST_PLUSF:
+    return "plusf";
   case INST_MINUS:
     return "minus";
   case INST_MULT:
@@ -60,38 +62,69 @@ char *vm_inst_t_to_str(Inst_t type) {
   }
 }
 
-inline static int vm_inst_has_operand(Inst *inst) {
-  switch (inst->type) {
-  case INST_PUSH:
-    return 1;
-  case INST_POP:
-    return 0;
-  case INST_PLUS:
-    return 0;
-  case INST_MINUS:
-    return 0;
-  case INST_MULT:
-    return 0;
-  case INST_DIV:
-    return 0;
-  case INST_PRINT:
-    return 0;
-  case INST_NEGATE:
-    return 0;
-  case INST_DEF_GLOBAL:
-    return 1;
-  case INST_DEF_LOCAL:
-    return 1;
-  case INST_VAR_GLOBAL:
-    return 1;
-  case INST_VAR_LOCAL:
-    return 1;
-  case INST_EOF:
-    return 0;
-  default:
-    __builtin_unreachable();
-  }
-}
+static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
+    [INST_PUSH] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_ANY,
+        },
+    [INST_POP] =
+        {
+            .has_operand = 0,
+        },
+    [INST_PLUS] =
+        {
+            .has_operand = 0,
+        },
+    [INST_PLUSF] =
+        {
+            .has_operand = 0,
+        },
+    [INST_MINUS] =
+        {
+            .has_operand = 0,
+        },
+    [INST_MULT] =
+        {
+            .has_operand = 0,
+        },
+    [INST_DIV] =
+        {
+            .has_operand = 0,
+        },
+    [INST_PRINT] =
+        {
+            .has_operand = 0,
+        },
+    [INST_NEGATE] =
+        {
+            .has_operand = 0,
+        },
+    [INST_DEF_GLOBAL] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_SV,
+        },
+    [INST_DEF_LOCAL] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_U64,
+        },
+    [INST_VAR_GLOBAL] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_SV,
+        },
+    [INST_VAR_LOCAL] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_U64,
+        },
+    [INST_EOF] =
+        {
+            .has_operand = 0,
+        },
+};
 
 void vm_stack_dump(void) {
   printf("Stack: \n");
@@ -106,8 +139,27 @@ void vm_program_dump(void) {
   for (size_t i = 0; i < (size_t)vm.program_size; i++) {
     Inst *inst = &vm.program[i];
     printf("%s ", vm_inst_t_to_str(inst->type));
-    if (vm_inst_has_operand(inst)) {
-      printf("%lld", inst->operand.as_u64);
+    if (INST_CONTEXTS[inst->type].has_operand) {
+      switch (INST_CONTEXTS[inst->type].operand_type) {
+      case WORD_ANY:
+        printf("%lld", inst->operand.as_u64);
+        break;
+      case WORD_U64:
+        printf("%lld", inst->operand.as_u64);
+        break;
+      case WORD_I64:
+        printf("%lld", inst->operand.as_i64);
+        break;
+      case WORD_F64:
+        printf("%f", inst->operand.as_f64);
+        break;
+      case WORD_SV:
+        printf("%.*s", inst->operand.as_sv.len, inst->operand.as_sv.str);
+        break;
+      case WORD_PTR:
+        printf("%p", inst->operand.as_ptr);
+        break;
+      }
     }
     printf("\n");
   }
@@ -139,6 +191,13 @@ void vm_execute(void) {
 
       word_one = vm.stack[vm.stack_count - 1];
       vm.stack[--vm.stack_count - 1].as_u64 += word_one.as_u64;
+      continue;
+
+    case INST_PLUSF:
+      assert(vm.stack_count > 1 && "Stack underflow");
+
+      word_one = vm.stack[vm.stack_count - 1];
+      vm.stack[--vm.stack_count - 1].as_f64 += word_one.as_f64;
       continue;
 
     case INST_MINUS:

@@ -38,6 +38,7 @@ static void load_code_from_file(const char *file_path, char *buf) {
   null_terminate(buf);
 
   fclose(file);
+  return;
 
 close:
   if (file)

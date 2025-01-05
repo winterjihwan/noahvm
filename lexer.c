@@ -77,7 +77,7 @@ inline static int is_alphabet(const int c) {
 }
 inline static int is_number(const char c) { return c >= 48 && c <= 57; }
 
-inline static void lexer_lex_alphabet(void) {
+static void lexer_lex_alphabet(void) {
   int len = 1;
   char *p_code = lexer.code;
   p_code++;
@@ -96,10 +96,37 @@ inline static void lexer_lex_alphabet(void) {
   lexer_lex_token(Token_Identifier, len);
 }
 
-inline static void lexer_lex_number(void) {
+static void lexer_lex_number(void) {
   int len = 1;
   char *p_code = lexer.code;
   p_code++;
+
+  while (1) {
+    char c = *p_code;
+
+    if (c == '.') {
+      goto token_float;
+    }
+
+    if (c == '\0' || !is_number(c)) {
+      break;
+    }
+
+    len++;
+    p_code++;
+  }
+
+  lexer_lex_token(Token_Number, len);
+  return;
+
+token_float:
+  len++;
+  p_code++;
+  char c = *p_code;
+
+  if (!is_number(c)) {
+    fprintf(stderr, "Expected numeric after '.'");
+  }
 
   while (1) {
     char c = *p_code;
@@ -112,7 +139,7 @@ inline static void lexer_lex_number(void) {
     p_code++;
   }
 
-  lexer_lex_token(Token_Number, len);
+  lexer_lex_token(Token_Float, len);
 }
 
 static int lexer_lex_alphanumeric(void) {
@@ -231,6 +258,8 @@ char *lexer_token_t_to_str(const Token_t type) {
     return "Token_Identifier";
   case Token_Number:
     return "Token_Number";
+  case Token_Float:
+    return "Token_Float";
   case Token_LBracket:
     return "Token_LBracket";
   case Token_RBracket:

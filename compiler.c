@@ -24,11 +24,24 @@ void compiler_dump(Compiler *compiler) {
   printf("\tdepth: %d\n", compiler->depth);
 }
 
-static Bp PRED_TABLE[Token_EOF] = {
-    [Token_Plus] = {.in_power = BP_IN_PLUS},
-    [Token_Minus] = {.in_power = BP_IN_MINUS, .pre_power = BP_PRE_MINUS},
-    [Token_Mult] = {.in_power = BP_IN_MULT},
-    [Token_Div] = {.in_power = BP_IN_DIV},
+static Bp PRED_TABLE[Token_EOF + 1] = {
+    [Token_Plus] =
+        {
+            .in_power = BP_IN_PLUS,
+        },
+    [Token_Minus] =
+        {
+            .in_power = BP_IN_MINUS,
+            .pre_power = BP_PRE_MINUS,
+        },
+    [Token_Mult] =
+        {
+            .in_power = BP_IN_MULT,
+        },
+    [Token_Div] =
+        {
+            .in_power = BP_IN_DIV,
+        },
 };
 
 inline static int compiler_token_is_pre_op(Token_t type) {
@@ -38,10 +51,12 @@ inline static int compiler_token_is_pre_op(Token_t type) {
   return 0;
 }
 
-static Inst compiler_translate_op(Token_t type) {
+static Inst compiler_translate_op(Token_t lhs_type, Token_t type) {
+  int as_f = lhs_type == Token_Float ? 1 : 0;
+
   switch (type) {
   case Token_Plus:
-    return MAKE_PLUS;
+    return as_f ? MAKE_PLUSF : MAKE_PLUS;
   case Token_Minus:
     return MAKE_MINUS;
   case Token_Mult:
@@ -54,10 +69,16 @@ static Inst compiler_translate_op(Token_t type) {
   };
 }
 
-inline static int compiler_sv_to_num(char *str, int len) {
+inline static uint64_t compiler_sv_to_u64(char *str, int len) {
   char buf[len + 1];
   snprintf(buf, len + 1, "%.*s", len, str);
   return strtol(buf, NULL, 10);
+}
+
+inline static uint64_t compiler_sv_to_f64(char *str, int len) {
+  char buf[len + 1];
+  snprintf(buf, len + 1, "%.*s", len, str);
+  return strtof(buf, NULL);
 }
 
 #define NEXT_TOKEN &tokens[tokens_pos++]
@@ -77,14 +98,6 @@ inline static int compiler_sv_to_num(char *str, int len) {
     }                                                                          \
   } while (0)
 
-inline static void compiler_locals_dump(Compiler *compiler) {
-  printf("Locals: \n");
-  for (size_t i = 0; i < compiler->locals_count; i++) {
-    Local *local = &compiler->locals[i];
-    printf("%zu: %.*s\n", i, local->name.len, local->name.str);
-  }
-}
-
 static int compiler_var_resolve(Compiler *compiler, Sv *name) {
   for (int i = compiler->locals_count - 1; i >= 0; i--) {
     Local *local = &compiler->locals[i];
@@ -101,7 +114,11 @@ static int compiler_var_resolve(Compiler *compiler, Sv *name) {
 
 static void compiler_emit_ir(Compiler *compiler, Token *lhs) {
   if (lhs->type == Token_Number) {
-    Word operand = (Word){.as_u64 = compiler_sv_to_num(lhs->start, lhs->len)};
+    Word operand = (Word){.as_u64 = compiler_sv_to_u64(lhs->start, lhs->len)};
+
+    PUSH_INST(MAKE_PUSH(operand));
+  } else if (lhs->type == Token_Float) {
+    Word operand = (Word){.as_f64 = compiler_sv_to_f64(lhs->start, lhs->len)};
 
     PUSH_INST(MAKE_PUSH(operand));
   } else if (lhs->type == Token_Identifier) {
@@ -144,17 +161,14 @@ static void compiler_expr_bp(Compiler *compiler, Token *tokens,
 
     uint8_t in_bp = PRED_TABLE[op->type].in_power;
 
-    if (!in_bp)
-      break;
-
-    if (in_bp < min_bp) {
+    if (!in_bp || in_bp < min_bp) {
       break;
     }
 
     tokens_pos++;
     compiler_expr_bp(compiler, tokens, in_bp);
 
-    PUSH_INST(compiler_translate_op(op->type));
+    PUSH_INST(compiler_translate_op(lhs->type, op->type));
   }
 }
 
@@ -211,7 +225,6 @@ static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
   };
 
   if (compiler->depth == 0) {
-    // Global
     PUSH_INST(MAKE_DEF_GLOBAL(name));
   } else {
     LOCAL_ADD(name, compiler->depth);
@@ -273,7 +286,7 @@ static void compiler_stmt(Compiler *compiler, Token *tokens) {
   } else if (peek->type == Token_LBrace) {
     compiler_stmt_block(compiler, tokens);
 
-  } else if (peek->type == Token_Number) {
+  } else {
     compiler_expr_stmt(compiler, tokens);
   };
 }

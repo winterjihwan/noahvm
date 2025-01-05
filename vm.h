@@ -9,6 +9,7 @@ typedef enum {
   INST_PUSH,
   INST_POP,
   INST_PLUS,
+  INST_PLUSF,
   INST_MINUS,
   INST_MULT,
   INST_DIV,
@@ -25,6 +26,11 @@ typedef struct {
   Inst_t type;
   Word operand;
 } Inst;
+
+typedef struct {
+  int has_operand;
+  Word_t operand_type;
+} Inst_Context;
 
 #define VM_STACK_CAP 512
 #define PROGRAM_STACK_CAP 128
@@ -48,6 +54,8 @@ typedef struct {
   (Inst) { .type = INST_POP }
 #define MAKE_PLUS                                                              \
   (Inst) { .type = INST_PLUS }
+#define MAKE_PLUSF                                                             \
+  (Inst) { .type = INST_PLUSF }
 #define MAKE_MINUS                                                             \
   (Inst) { .type = INST_MINUS }
 #define MAKE_MULT                                                              \

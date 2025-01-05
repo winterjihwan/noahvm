@@ -14,6 +14,15 @@ typedef struct {
   int len;
 } Sv;
 
+typedef enum {
+  WORD_ANY,
+  WORD_U64,
+  WORD_I64,
+  WORD_F64,
+  WORD_SV,
+  WORD_PTR,
+} Word_t;
+
 typedef union {
   uint64_t as_u64;
   int64_t as_i64;
