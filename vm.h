@@ -22,6 +22,7 @@ typedef enum {
   INST_VAR_LOCAL,
   INST_JMP_ABS,
   INST_JMP_EQ,
+  INST_JMP_NE,
   INST_RET,
   INST_LDR,
   INST_STR,
@@ -104,7 +105,11 @@ typedef struct {
   }
 #define MAKE_JMP_EQ(offset)                                                    \
   (Inst) {                                                                     \
-    .type = INST_JMP_ABS, .operand = {.as_u64 = offset }                       \
+    .type = INST_JMP_EQ, .operand = {.as_u64 = offset }                        \
+  }
+#define MAKE_JMP_NE(offset)                                                    \
+  (Inst) {                                                                     \
+    .type = INST_JMP_NE, .operand = {.as_u64 = offset }                        \
   }
 #define MAKE_RET                                                               \
   (Inst) { .type = INST_RET }

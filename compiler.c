@@ -275,10 +275,6 @@ static void compiler_stmt_define(Compiler *compiler, Token *tokens) {
   compiler_stmt_assign(compiler, tokens);
 }
 
-static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
-  MUNCH_TOKEN(Token_If);
-}
-
 static void compiler_stmt(Compiler *compiler, Token *tokens);
 
 #define ENTER_SCOPE                                                            \
@@ -318,6 +314,34 @@ static void compiler_stmt_block(Compiler *compiler, Token *tokens, int is_fn) {
   }
 
   EXIT_SCOPE;
+}
+
+static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
+  MUNCH_TOKEN(Token_If);
+  MUNCH_TOKEN(Token_LParen);
+
+  compiler_expr(compiler, tokens);
+
+  MUNCH_TOKEN(Token_RParen);
+
+  PUSH_INST(MAKE_JMP_NE(-1));
+  uint64_t then_start_pos = compiler->ir->insts_count;
+
+  compiler_stmt_block(compiler, tokens, 0);
+
+  uint64_t then_end_pos = compiler->ir->insts_count;
+
+  ALTER_INST(then_start_pos - 1, MAKE_JMP_NE(then_end_pos + 1));
+  PUSH_INST(MAKE_JMP_ABS(then_end_pos + 1));
+
+  if (PEEK_TOKEN_TYPE == Token_Else) {
+    MUNCH_TOKEN(Token_Else);
+
+    compiler_stmt_block(compiler, tokens, 0);
+
+    uint64_t else_end_pos = compiler->ir->insts_count;
+    ALTER_INST(then_end_pos, MAKE_JMP_ABS(else_end_pos));
+  }
 }
 
 static Compiler *compiler_call_new(Compiler *compiler, Sv name) {

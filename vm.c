@@ -61,6 +61,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "jmp_abs";
   case INST_JMP_EQ:
     return "jmp_eq";
+  case INST_JMP_NE:
+    return "jmp_ne";
   case INST_RET:
     return "ret";
   case INST_LDR:
@@ -144,6 +146,11 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
             .operand_type = WORD_U64,
         },
     [INST_JMP_EQ] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_U64,
+        },
+    [INST_JMP_NE] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
@@ -232,8 +239,8 @@ void vm_execute(void) {
     uint64_t jmp_offset;
     uint64_t fp;
 
-    vm_stack_dump();
-    vm_inst_dump(&inst);
+    /*vm_stack_dump();*/
+    /*vm_inst_dump(&inst);*/
 
     switch (inst.type) {
     case INST_PUSH:
@@ -374,18 +381,29 @@ void vm_execute(void) {
       continue;
 
     case INST_JMP_EQ:;
-      assert(vm.stack_count > 1 && "Stack underflow");
+      assert(vm.stack_count > 0 && "Stack underflow");
 
-      word_one = vm.stack[vm.stack_count - 1];
-      word_two = vm.stack[vm.stack_count - 2];
-      vm.stack_count -= 2;
-      SP_DECREMENT;
+      eq = vm.stack[vm.stack_count-- - 1].as_u64;
       SP_DECREMENT;
 
       jmp_offset = inst.operand.as_u64;
       assert(jmp_offset < vm.program_size && "Program illegal access");
 
-      if (word_one.as_u64 == word_two.as_u64)
+      if (eq)
+        vm.ip = jmp_offset;
+
+      continue;
+
+    case INST_JMP_NE:;
+      assert(vm.stack_count > 0 && "Stack underflow");
+
+      eq = vm.stack[vm.stack_count-- - 1].as_u64;
+      SP_DECREMENT;
+
+      jmp_offset = inst.operand.as_u64;
+      assert(jmp_offset < vm.program_size && "Program illegal access");
+
+      if (!eq)
         vm.ip = jmp_offset;
 
       continue;
