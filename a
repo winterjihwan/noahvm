@@ -1,8 +1,7 @@
-fn a(){
-	int a = 3;
-	int b = 3;
-	print a;
-	return;
+fn a(int a, int b){
+	int c = 3;
+	print a + b + c;
+	return c;
 }
 
-a();
+print a(2, 2) + 4;

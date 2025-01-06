@@ -97,6 +97,7 @@ inline static uint64_t compiler_sv_to_f64(char *str, int len) {
 
 #define NEXT_TOKEN &tokens[tokens_pos++]
 #define PEEK_TOKEN &tokens[tokens_pos]
+#define PEEK_TOKEN_TYPE tokens[tokens_pos].type
 #define PEEK_PEEK_TOKEN &tokens[tokens_pos + 1]
 #define PUSH_INST(inst)                                                        \
   do {                                                                         \
@@ -108,7 +109,7 @@ inline static uint64_t compiler_sv_to_f64(char *str, int len) {
   } while (0)
 #define MUNCH_TOKEN(token_type)                                                \
   do {                                                                         \
-    if (*PEEK_TOKEN.type == token_type) {                                      \
+    if (PEEK_TOKEN_TYPE == token_type) {                                       \
       tokens_pos++;                                                            \
     } else {                                                                   \
       fprintf(stderr, "Expected token type %s",                                \
@@ -160,13 +161,12 @@ static void compiler_expr_bp(Compiler *compiler, Token *tokens,
                              uint8_t min_bp) {
   Token *lhs = NEXT_TOKEN;
 
-  if (*PEEK_TOKEN.type == Token_LParen) {
+  if (PEEK_TOKEN_TYPE == Token_LParen) {
     Sv label = {.len = lhs->len, .str = lhs->start};
 
     compiler_expr_call(compiler, tokens, label);
 
     lhs = PEEK_TOKEN;
-    printf("Here you go: %s\n", lexer_token_t_to_str(lhs->type));
   }
 
   int lhs_is_pre_op = compiler_token_is_pre_op(lhs->type);
@@ -229,7 +229,7 @@ static void compiler_expr_stmt(Compiler *compiler, Token *tokens) {
   } while (0)
 #define EXPECT_TOKEN(expected_type)                                            \
   do {                                                                         \
-    if (*PEEK_TOKEN.type != expected_type) {                                   \
+    if (PEEK_TOKEN_TYPE != expected_type) {                                    \
       fprintf(stderr, "Expected type %s",                                      \
               lexer_token_t_to_str(expected_type));                            \
       exit(7);                                                                 \
@@ -264,6 +264,7 @@ static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
 static void compiler_stmt_define(Compiler *compiler, Token *tokens) {
   // TODO: Type checking
   Token *type = NEXT_TOKEN;
+  (void)type;
 
   compiler_stmt_assign(compiler, tokens);
 }
@@ -297,6 +298,7 @@ static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
     compiler_stmt(compiler, tokens);
   }
   BLOCK_RETURNED = 0;
+  PUSH_INST(MAKE_STR(REG_RAX));
 
   for (size_t i = 0; i < compiler->locals_count - locals_count_prev; i++) {
     PUSH_INST(MAKE_POP);
@@ -348,17 +350,17 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
 
   PUSH_INST(MAKE_JMP_ABS(-1));
 
-  uint8_t locals_count_prev = compiler->locals_count;
   uint64_t label_start_pos = compiler->ir->insts_count;
   uint8_t arity = 0;
 
   MUNCH_TOKEN(Token_LParen);
   while (1) {
-    if (*PEEK_TOKEN.type == Token_RParen)
+    if (PEEK_TOKEN_TYPE == Token_RParen)
       break;
 
     // TODO: Type checking
     Token *next = NEXT_TOKEN;
+    (void)next;
 
     EXPECT_TOKEN(Token_Identifier);
     Token *identifier = NEXT_TOKEN;
@@ -370,7 +372,7 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
     LOCAL_ADD(name, compiler->depth);
     arity++;
 
-    if (*PEEK_TOKEN.type == Token_RParen)
+    if (PEEK_TOKEN_TYPE == Token_RParen)
       break;
 
     MUNCH_TOKEN(Token_Comma);
@@ -424,7 +426,7 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
       break;
     }
 
-    if (*PEEK_TOKEN.type != Token_Comma) {
+    if (PEEK_TOKEN_TYPE != Token_Comma) {
       fprintf(stderr, "Expected %d arguments for Fn %.*s\n", fn->arity,
               label.len, label.str);
       exit(11);
@@ -432,8 +434,9 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
     MUNCH_TOKEN(Token_Comma);
   }
 
-  uint64_t ra = compiler->ir->insts_count + 2;
-  PUSH_INST(MAKE_SET_RA(ra));
+  uint64_t ra = compiler->ir->insts_count + 3;
+  PUSH_INST(MAKE_PUSH((Word){.as_u64 = ra}));
+  PUSH_INST(MAKE_STR(REG_RA));
   PUSH_INST(MAKE_JMP_ABS(fn->label_pos));
 
   // Post
@@ -443,13 +446,14 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
 
   compiler_call_destruct(new_compiler);
 
+  PUSH_INST(MAKE_LDR(REG_RAX));
   MUNCH_TOKEN(Token_RParen);
 }
 
 static void compiler_stmt_return(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_Return);
 
-  if (*PEEK_TOKEN.type == Token_Semicolon) {
+  if (PEEK_TOKEN_TYPE == Token_Semicolon) {
     Word null = {.as_u64 = 0};
     PUSH_INST(MAKE_PUSH(null));
 
@@ -463,25 +467,25 @@ static void compiler_stmt_return(Compiler *compiler, Token *tokens) {
 }
 
 static void compiler_stmt(Compiler *compiler, Token *tokens) {
-  Token *peek = PEEK_TOKEN;
+  Token_t peek_type = PEEK_TOKEN_TYPE;
   Token *peek_peek = PEEK_PEEK_TOKEN;
 
-  if (peek->type == Token_Int || peek->type == Token_Str) {
+  if (peek_type == Token_Int || peek_type == Token_Str) {
     compiler_stmt_define(compiler, tokens);
 
-  } else if (peek->type == Token_Identifier && peek_peek->type == Token_Equal) {
+  } else if (peek_type == Token_Identifier && peek_peek->type == Token_Equal) {
     compiler_stmt_assign(compiler, tokens);
 
-  } else if (peek->type == Token_Print) {
+  } else if (peek_type == Token_Print) {
     compiler_stmt_print(compiler, tokens);
 
-  } else if (peek->type == Token_LBrace) {
+  } else if (peek_type == Token_LBrace) {
     compiler_stmt_block(compiler, tokens);
 
-  } else if (peek->type == Token_Fn) {
+  } else if (peek_type == Token_Fn) {
     compiler_stmt_fn(compiler, tokens);
 
-  } else if (peek->type == Token_Return) {
+  } else if (peek_type == Token_Return) {
     compiler_stmt_return(compiler, tokens);
 
   } else {
@@ -491,8 +495,7 @@ static void compiler_stmt(Compiler *compiler, Token *tokens) {
 
 void compiler_compile(Compiler *compiler, Token *tokens) {
   while (1) {
-    Token *peek = PEEK_TOKEN;
-    if (peek->type == Token_EOF)
+    if (PEEK_TOKEN_TYPE == Token_EOF)
       break;
 
     compiler_stmt(compiler, tokens);

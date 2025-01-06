@@ -8,8 +8,8 @@ fn b(){
 	int b = 43;
 	print b - 34;
 
-	return;
+	return b;
 }
 
-a(30, 20);
+print a(30, 20) + a(1, 1);
 b();

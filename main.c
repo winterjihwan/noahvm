@@ -49,23 +49,6 @@ extern Lexer lexer;
 extern Compiler compiler;
 extern Vm vm;
 
-// int main(void) {
-// #define INST_COUNT 6
-//
-//   Inst program[INST_COUNT] = {
-//       MAKE_PUSH(3),     MAKE_PUSH(3),  MAKE_PLUS,
-//       MAKE_ASSIGN("a"), MAKE_VAR("a"), MAKE_EOF,
-//   };
-//
-//   vm_init();
-//   vm_program_load_from_memory(program, INST_COUNT);
-//   vm_program_dump();
-//   vm_execute();
-//   vm_stack_dump();
-//
-// #undef INST_COUNT
-// }
-
 int main(int argc, char **argv) {
   if (argc != 2) {
     fprintf(stderr, "USAGE: ./main <file.c>");

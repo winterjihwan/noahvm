@@ -21,7 +21,8 @@ typedef enum {
   INST_VAR_LOCAL,
   INST_JMP_ABS,
   INST_RET,
-  INST_SET_RA,
+  INST_LDR,
+  INST_STR,
   INST_EOF,
 } Inst_t;
 
@@ -50,7 +51,12 @@ typedef struct {
 
   Hash_Table env;
 
-  uint64_t Reg_RA;
+  // TODO: IP as reg
+#define REG_FP 11
+#define REG_SP 13
+#define REG_RA 13
+#define REG_RAX 14
+  Word reg[16];
 } Vm;
 
 #define MAKE_PUSH(word)                                                        \
@@ -93,9 +99,13 @@ typedef struct {
   }
 #define MAKE_RET                                                               \
   (Inst) { .type = INST_RET }
-#define MAKE_SET_RA(ra)                                                        \
+#define MAKE_LDR(reg_no)                                                       \
   (Inst) {                                                                     \
-    .type = INST_SET_RA, .operand = {.as_u64 = ra }                            \
+    .type = INST_LDR, .operand = {.as_u64 = reg_no }                           \
+  }
+#define MAKE_STR(reg_no)                                                       \
+  (Inst) {                                                                     \
+    .type = INST_STR, .operand = {.as_u64 = reg_no }                           \
   }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }

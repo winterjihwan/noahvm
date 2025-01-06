@@ -13,3 +13,4 @@ o\\\_(")(")
 
 - Hash_Table return NULL, not exit
 - Little bit of clean up
+- Stack pointer register

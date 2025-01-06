@@ -59,8 +59,10 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "jmp_abs";
   case INST_RET:
     return "ret";
-  case INST_SET_RA:
-    return "set_ra";
+  case INST_LDR:
+    return "ldr";
+  case INST_STR:
+    return "str";
   case INST_EOF:
     return "eof";
   default:
@@ -135,7 +137,12 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
         {
             .has_operand = 0,
         },
-    [INST_SET_RA] =
+    [INST_LDR] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_U64,
+        },
+    [INST_STR] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
@@ -154,34 +161,38 @@ void vm_stack_dump(void) {
   printf("-----\n\n");
 }
 
+static void vm_inst_dump(const Inst *inst) {
+  printf("%s ", vm_inst_t_to_str(inst->type));
+  if (INST_CONTEXTS[inst->type].has_operand) {
+    switch (INST_CONTEXTS[inst->type].operand_type) {
+    case WORD_ANY:
+      printf("%lld", inst->operand.as_u64);
+      break;
+    case WORD_U64:
+      printf("%lld", inst->operand.as_u64);
+      break;
+    case WORD_I64:
+      printf("%lld", inst->operand.as_i64);
+      break;
+    case WORD_F64:
+      printf("%f", inst->operand.as_f64);
+      break;
+    case WORD_SV:
+      printf("%.*s", inst->operand.as_sv.len, inst->operand.as_sv.str);
+      break;
+    case WORD_PTR:
+      printf("%p", inst->operand.as_ptr);
+      break;
+    }
+  }
+  printf("\n");
+}
+
 void vm_program_dump(void) {
   printf("Program: \n");
   for (size_t i = 0; i < (size_t)vm.program_size; i++) {
     Inst *inst = &vm.program[i];
-    printf("%s ", vm_inst_t_to_str(inst->type));
-    if (INST_CONTEXTS[inst->type].has_operand) {
-      switch (INST_CONTEXTS[inst->type].operand_type) {
-      case WORD_ANY:
-        printf("%lld", inst->operand.as_u64);
-        break;
-      case WORD_U64:
-        printf("%lld", inst->operand.as_u64);
-        break;
-      case WORD_I64:
-        printf("%lld", inst->operand.as_i64);
-        break;
-      case WORD_F64:
-        printf("%f", inst->operand.as_f64);
-        break;
-      case WORD_SV:
-        printf("%.*s", inst->operand.as_sv.len, inst->operand.as_sv.str);
-        break;
-      case WORD_PTR:
-        printf("%p", inst->operand.as_ptr);
-        break;
-      }
-    }
-    printf("\n");
+    vm_inst_dump(inst);
   }
   printf("-----\n\n");
 }
@@ -193,9 +204,10 @@ void vm_execute(void) {
   while (end-- != 0) {
     const Inst inst = vm.program[vm.ip++];
     Word word_one;
+    uint64_t reg_no;
 
-    vm_stack_dump();
-    printf("Inst: %s\n", vm_inst_t_to_str(inst.type));
+    /*vm_stack_dump();*/
+    /*vm_inst_dump(&inst);*/
 
     switch (inst.type) {
     case INST_PUSH:
@@ -274,7 +286,6 @@ void vm_execute(void) {
       assert(vm.stack_count > 0 && "Stack underflow");
 
       uint64_t def_offset = inst.operand.as_u64;
-      printf("Def offset: %d\n", (int)def_offset);
       assert(def_offset < vm.stack_count && "Stack illegal access");
 
       Word word = vm.stack[def_offset];
@@ -309,12 +320,26 @@ void vm_execute(void) {
       continue;
 
     case INST_RET:
-      vm.ip = vm.Reg_RA;
+      vm.ip = vm.reg[REG_RA].as_u64;
 
       continue;
 
-    case INST_SET_RA:
-      vm.Reg_RA = inst.operand.as_u64;
+    case INST_STR:
+      assert(vm.stack_count > 0 && "Stack underflow");
+
+      reg_no = inst.operand.as_u64;
+
+      value = vm.stack[vm.stack_count-- - 1];
+      vm.reg[reg_no] = value;
+
+      continue;
+
+    case INST_LDR:
+      assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
+
+      reg_no = inst.operand.as_u64;
+
+      vm.stack[vm.stack_count++] = vm.reg[reg_no];
 
       continue;
 
