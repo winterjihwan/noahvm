@@ -1,0 +1,6 @@
+fn a(){
+	print 3;
+	return;
+}
+
+a();

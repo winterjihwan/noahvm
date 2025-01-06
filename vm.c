@@ -43,6 +43,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "mult";
   case INST_DIV:
     return "div";
+  case INST_EQ:
+    return "eq";
   case INST_PRINT:
     return "print";
   case INST_NEGATE:
@@ -57,6 +59,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "var_local";
   case INST_JMP_ABS:
     return "jmp_abs";
+  case INST_JMP_EQ:
+    return "jmp_eq";
   case INST_RET:
     return "ret";
   case INST_LDR:
@@ -102,6 +106,10 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
         {
             .has_operand = 0,
         },
+    [INST_EQ] =
+        {
+            .has_operand = 0,
+        },
     [INST_PRINT] =
         {
             .has_operand = 0,
@@ -131,6 +139,11 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
             .operand_type = WORD_U64,
         },
     [INST_JMP_ABS] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_U64,
+        },
+    [INST_JMP_EQ] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
@@ -210,16 +223,17 @@ Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 #define SP_DECREMENT vm.reg[REG_SP].as_u64--
 
 void vm_execute(void) {
-  int end = 40;
+  int end = 90;
   while (end-- != 0) {
     const Inst inst = vm.program[vm.ip++];
     Word word_one;
+    Word word_two;
     uint64_t reg_no;
+    uint64_t jmp_offset;
+    uint64_t fp;
 
     vm_stack_dump();
     vm_inst_dump(&inst);
-
-    uint64_t fp;
 
     switch (inst.type) {
     case INST_PUSH:
@@ -277,6 +291,23 @@ void vm_execute(void) {
       SP_DECREMENT;
       continue;
 
+    case INST_EQ:
+      assert(vm.stack_count > 1 && "Stack underflow");
+
+      word_one = vm.stack[vm.stack_count - 1];
+      word_two = vm.stack[vm.stack_count - 2];
+
+      uint64_t eq = 0;
+      if (word_one.as_u64 == word_two.as_u64)
+        eq = 1;
+
+      vm.stack[vm.stack_count - 2] = (Word){.as_u64 = eq};
+
+      vm.stack_count -= 1;
+      SP_DECREMENT;
+
+      continue;
+
     case INST_PRINT:
       assert(vm.stack_count > 0 && "Stack underflow");
 
@@ -329,7 +360,6 @@ void vm_execute(void) {
 
       uint64_t var_offset = inst.operand.as_u64;
       fp = vm.reg[REG_FP].as_u64;
-      printf("FP: %lld\n", fp);
       assert(var_offset < vm.stack_count && "Stack illegal access");
 
       vm.stack[vm.stack_count++] = vm.stack[fp + var_offset];
@@ -337,10 +367,27 @@ void vm_execute(void) {
       continue;
 
     case INST_JMP_ABS:;
-      uint64_t jmp_offset = inst.operand.as_u64;
+      jmp_offset = inst.operand.as_u64;
       assert(jmp_offset < vm.program_size && "Program illegal access");
 
       vm.ip = jmp_offset;
+      continue;
+
+    case INST_JMP_EQ:;
+      assert(vm.stack_count > 1 && "Stack underflow");
+
+      word_one = vm.stack[vm.stack_count - 1];
+      word_two = vm.stack[vm.stack_count - 2];
+      vm.stack_count -= 2;
+      SP_DECREMENT;
+      SP_DECREMENT;
+
+      jmp_offset = inst.operand.as_u64;
+      assert(jmp_offset < vm.program_size && "Program illegal access");
+
+      if (word_one.as_u64 == word_two.as_u64)
+        vm.ip = jmp_offset;
+
       continue;
 
     case INST_RET:

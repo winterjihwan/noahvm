@@ -28,6 +28,7 @@ typedef enum {
   Token_Mult,
   Token_Div,
   Token_Equal,
+  Token_EqualEqual,
   Token_ExcMark,
   Token_GT,
   Token_LT,

@@ -46,6 +46,7 @@ struct Compiler {
 
 typedef enum {
   BP_NONE,
+  BP_IN_CMP,
   BP_IN_PLUS,
   BP_IN_MINUS,
   BP_IN_MULT,

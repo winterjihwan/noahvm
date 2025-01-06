@@ -39,6 +39,10 @@ void compiler_dump(Compiler *compiler) {
 }
 
 static Bp PRED_TABLE[Token_EOF + 1] = {
+    [Token_EqualEqual] =
+        {
+            .in_power = BP_IN_CMP,
+        },
     [Token_Plus] =
         {
             .in_power = BP_IN_PLUS,
@@ -69,6 +73,8 @@ static Inst compiler_translate_op(Token_t lhs_type, Token_t type) {
   int as_f = lhs_type == Token_Float ? 1 : 0;
 
   switch (type) {
+  case Token_EqualEqual:
+    return MAKE_EQ;
   case Token_Plus:
     return as_f ? MAKE_PLUSF : MAKE_PLUS;
   case Token_Minus:
@@ -269,6 +275,10 @@ static void compiler_stmt_define(Compiler *compiler, Token *tokens) {
   compiler_stmt_assign(compiler, tokens);
 }
 
+static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
+  MUNCH_TOKEN(Token_If);
+}
+
 static void compiler_stmt(Compiler *compiler, Token *tokens);
 
 #define ENTER_SCOPE                                                            \
@@ -284,8 +294,8 @@ static void compiler_stmt(Compiler *compiler, Token *tokens);
   } while (0)
 
 static int BLOCK_RETURNED = 0;
-
-static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
+// TODO: BLOCK_RETURNED, is_fn is unpretty
+static void compiler_stmt_block(Compiler *compiler, Token *tokens, int is_fn) {
   ENTER_SCOPE;
 
   uint8_t locals_count_prev = compiler->locals_count;
@@ -298,7 +308,10 @@ static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
     compiler_stmt(compiler, tokens);
   }
   BLOCK_RETURNED = 0;
-  PUSH_INST(MAKE_STR(REG_RAX));
+
+  // TODO: can i move this somewhere else?
+  if (is_fn)
+    PUSH_INST(MAKE_STR(REG_RAX));
 
   for (size_t i = 0; i < compiler->locals_count - locals_count_prev; i++) {
     PUSH_INST(MAKE_POP);
@@ -382,7 +395,7 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   FN_DECLARE(label, label_start_pos, arity);
 
   // Mid
-  compiler_stmt_block(compiler, tokens);
+  compiler_stmt_block(compiler, tokens, 1);
 
   PUSH_INST(MAKE_RET);
 
@@ -453,12 +466,12 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
 
   compiler_call_destruct(new_compiler);
 
-  // ldr rax
-  PUSH_INST(MAKE_LDR(REG_RAX));
-
   // mov sp, fp
   PUSH_INST(MAKE_PUSH((Word){.as_u64 = REG_FP}));
   PUSH_INST(MAKE_MOV(REG_SP));
+
+  // ldr rax
+  PUSH_INST(MAKE_LDR(REG_RAX));
 
   MUNCH_TOKEN(Token_RParen);
 }
@@ -489,11 +502,14 @@ static void compiler_stmt(Compiler *compiler, Token *tokens) {
   } else if (peek_type == Token_Identifier && peek_peek->type == Token_Equal) {
     compiler_stmt_assign(compiler, tokens);
 
+  } else if (peek_type == Token_If) {
+    compiler_stmt_if(compiler, tokens);
+
   } else if (peek_type == Token_Print) {
     compiler_stmt_print(compiler, tokens);
 
   } else if (peek_type == Token_LBrace) {
-    compiler_stmt_block(compiler, tokens);
+    compiler_stmt_block(compiler, tokens, 0);
 
   } else if (peek_type == Token_Fn) {
     compiler_stmt_fn(compiler, tokens);

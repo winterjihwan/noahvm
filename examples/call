@@ -1,7 +1,7 @@
 fn a(int a, int b){
 	print a;
 	
-	return;
+	return a;
 }
 
 fn b(){
@@ -11,5 +11,5 @@ fn b(){
 	return b;
 }
 
-print a(30, 20) + a(1, 1);
+print a(30, 20) + a(1, 1) + a(5, 6);
 b();

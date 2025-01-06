@@ -227,7 +227,11 @@ void lexer_lex(void) {
       lexer_lex_token(Token_Div, 1);
       continue;
     case '=':
-      lexer_lex_token(Token_Equal, 1);
+      if (*++code == '=') {
+        lexer_lex_token(Token_EqualEqual, 2);
+      } else {
+        lexer_lex_token(Token_Equal, 1);
+      }
       continue;
     case '!':
       lexer_lex_token(Token_ExcMark, 1);
@@ -299,6 +303,8 @@ char *lexer_token_t_to_str(const Token_t type) {
     return "Token_Div";
   case Token_Equal:
     return "Token_Equal";
+  case Token_EqualEqual:
+    return "Token_EqualEqual";
   case Token_ExcMark:
     return "Token_ExcMark";
   case Token_GT:

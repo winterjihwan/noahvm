@@ -13,6 +13,7 @@ typedef enum {
   INST_MINUS,
   INST_MULT,
   INST_DIV,
+  INST_EQ,
   INST_PRINT,
   INST_NEGATE,
   INST_DEF_GLOBAL,
@@ -20,6 +21,7 @@ typedef enum {
   INST_VAR_GLOBAL,
   INST_VAR_LOCAL,
   INST_JMP_ABS,
+  INST_JMP_EQ,
   INST_RET,
   INST_LDR,
   INST_STR,
@@ -74,6 +76,8 @@ typedef struct {
   (Inst) { .type = INST_MULT }
 #define MAKE_DIV                                                               \
   (Inst) { .type = INST_DIV }
+#define MAKE_EQ                                                                \
+  (Inst) { .type = INST_EQ }
 #define MAKE_NEGATE                                                            \
   (Inst) { .type = INST_NEGATE }
 #define MAKE_DEF_GLOBAL(label)                                                 \
@@ -95,6 +99,10 @@ typedef struct {
 #define MAKE_PRINT                                                             \
   (Inst) { .type = INST_PRINT }
 #define MAKE_JMP_ABS(offset)                                                   \
+  (Inst) {                                                                     \
+    .type = INST_JMP_ABS, .operand = {.as_u64 = offset }                       \
+  }
+#define MAKE_JMP_EQ(offset)                                                    \
   (Inst) {                                                                     \
     .type = INST_JMP_ABS, .operand = {.as_u64 = offset }                       \
   }
