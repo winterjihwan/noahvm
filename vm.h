@@ -23,6 +23,7 @@ typedef enum {
   INST_RET,
   INST_LDR,
   INST_STR,
+  INST_MOV,
   INST_EOF,
 } Inst_t;
 
@@ -106,6 +107,10 @@ typedef struct {
 #define MAKE_STR(reg_no)                                                       \
   (Inst) {                                                                     \
     .type = INST_STR, .operand = {.as_u64 = reg_no }                           \
+  }
+#define MAKE_MOV(reg_no)                                                       \
+  (Inst) {                                                                     \
+    .type = INST_MOV, .operand = {.as_u64 = reg_no }                           \
   }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }

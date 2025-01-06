@@ -413,6 +413,10 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
   Fn *fn = compiler_fn_resolve(compiler, &label);
   uint8_t arity = fn->arity;
 
+  // mov fp, sp
+  PUSH_INST(MAKE_PUSH((Word){.as_u64 = REG_SP}));
+  PUSH_INST(MAKE_MOV(REG_FP));
+
   MUNCH_TOKEN(Token_LParen);
 
   while (1) {
@@ -434,9 +438,12 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
     MUNCH_TOKEN(Token_Comma);
   }
 
+  // str ra, #offset
   uint64_t ra = compiler->ir->insts_count + 3;
   PUSH_INST(MAKE_PUSH((Word){.as_u64 = ra}));
   PUSH_INST(MAKE_STR(REG_RA));
+
+  // jmp label
   PUSH_INST(MAKE_JMP_ABS(fn->label_pos));
 
   // Post
@@ -446,7 +453,13 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
 
   compiler_call_destruct(new_compiler);
 
+  // ldr rax
   PUSH_INST(MAKE_LDR(REG_RAX));
+
+  // mov sp, fp
+  PUSH_INST(MAKE_PUSH((Word){.as_u64 = REG_FP}));
+  PUSH_INST(MAKE_MOV(REG_SP));
+
   MUNCH_TOKEN(Token_RParen);
 }
 

@@ -63,6 +63,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "ldr";
   case INST_STR:
     return "str";
+  case INST_MOV:
+    return "mov";
   case INST_EOF:
     return "eof";
   default:
@@ -147,6 +149,11 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
             .has_operand = 1,
             .operand_type = WORD_U64,
         },
+    [INST_MOV] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_U64,
+        },
     [INST_EOF] =
         {
             .has_operand = 0,
@@ -199,27 +206,34 @@ void vm_program_dump(void) {
 
 Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 
+#define SP_INCREMENT vm.reg[REG_SP].as_u64++
+#define SP_DECREMENT vm.reg[REG_SP].as_u64--
+
 void vm_execute(void) {
-  int end = 30;
+  int end = 40;
   while (end-- != 0) {
     const Inst inst = vm.program[vm.ip++];
     Word word_one;
     uint64_t reg_no;
 
-    /*vm_stack_dump();*/
-    /*vm_inst_dump(&inst);*/
+    vm_stack_dump();
+    vm_inst_dump(&inst);
+
+    uint64_t fp;
 
     switch (inst.type) {
     case INST_PUSH:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
       vm.stack[vm.stack_count++] = inst.operand;
+      SP_INCREMENT;
       continue;
 
     case INST_POP:
       assert(vm.stack_count > 0 && "Stack underflow");
 
       vm.stack_count--;
+      SP_DECREMENT;
       continue;
 
     case INST_PLUS:
@@ -227,6 +241,7 @@ void vm_execute(void) {
 
       word_one = vm.stack[vm.stack_count - 1];
       vm.stack[--vm.stack_count - 1].as_u64 += word_one.as_u64;
+      SP_DECREMENT;
       continue;
 
     case INST_PLUSF:
@@ -234,6 +249,7 @@ void vm_execute(void) {
 
       word_one = vm.stack[vm.stack_count - 1];
       vm.stack[--vm.stack_count - 1].as_f64 += word_one.as_f64;
+      SP_DECREMENT;
       continue;
 
     case INST_MINUS:
@@ -241,6 +257,7 @@ void vm_execute(void) {
 
       word_one = vm.stack[vm.stack_count - 1];
       vm.stack[--vm.stack_count - 1].as_u64 -= word_one.as_u64;
+      SP_DECREMENT;
       continue;
 
     case INST_MULT:
@@ -248,6 +265,7 @@ void vm_execute(void) {
 
       word_one = vm.stack[vm.stack_count - 1];
       vm.stack[--vm.stack_count - 1].as_u64 *= word_one.as_u64;
+      SP_DECREMENT;
       continue;
 
     case INST_DIV:
@@ -256,6 +274,7 @@ void vm_execute(void) {
       word_one = vm.stack[vm.stack_count - 1];
       assert(word_one.as_u64 != 0);
       vm.stack[--vm.stack_count - 1].as_u64 /= word_one.as_u64;
+      SP_DECREMENT;
       continue;
 
     case INST_PRINT:
@@ -290,6 +309,7 @@ void vm_execute(void) {
 
       Word word = vm.stack[def_offset];
       vm.stack[vm.stack_count++] = word;
+      SP_INCREMENT;
 
       continue;
 
@@ -301,15 +321,19 @@ void vm_execute(void) {
              "Undefined var");
 
       vm.stack[vm.stack_count++] = vm_env_resolve(var_name);
+      SP_INCREMENT;
       continue;
 
     case INST_VAR_LOCAL:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
       uint64_t var_offset = inst.operand.as_u64;
+      fp = vm.reg[REG_FP].as_u64;
+      printf("FP: %lld\n", fp);
       assert(var_offset < vm.stack_count && "Stack illegal access");
 
-      vm.stack[vm.stack_count++] = vm.stack[var_offset];
+      vm.stack[vm.stack_count++] = vm.stack[fp + var_offset];
+      SP_INCREMENT;
       continue;
 
     case INST_JMP_ABS:;
@@ -330,6 +354,7 @@ void vm_execute(void) {
       reg_no = inst.operand.as_u64;
 
       value = vm.stack[vm.stack_count-- - 1];
+      SP_DECREMENT;
       vm.reg[reg_no] = value;
 
       continue;
@@ -340,6 +365,18 @@ void vm_execute(void) {
       reg_no = inst.operand.as_u64;
 
       vm.stack[vm.stack_count++] = vm.reg[reg_no];
+      SP_INCREMENT;
+
+      continue;
+
+    case INST_MOV:
+      assert(vm.stack_count > 0 && "Stack underflow");
+
+      uint64_t reg_dst = inst.operand.as_u64;
+      uint64_t reg_src = vm.stack[vm.stack_count-- - 1].as_u64;
+      SP_DECREMENT;
+
+      vm.reg[reg_dst] = vm.reg[reg_src];
 
       continue;
 
