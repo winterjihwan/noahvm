@@ -264,6 +264,7 @@ Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 /*  do { \*/
 /*    vm.reg[REG_SP].as_u64++; \*/
 /*    printf("IP    : %lld\n", vm.ip); \*/
+/*    printf("RA    : %lld\n", vm.reg[REG_RA].as_u64); \*/
 /*    printf("CPSR  : %lld\n", vm.reg[REG_CPSR].as_u64); \*/
 /*    printf("FP    : %lld\n", vm.reg[REG_FP].as_u64); \*/
 /*    printf("SP++  : %lld\n", vm.reg[REG_SP].as_u64); \*/
@@ -272,14 +273,14 @@ Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 /*  do { \*/
 /*    vm.reg[REG_SP].as_u64--; \*/
 /*    printf("IP    : %lld\n", vm.ip); \*/
+/*    printf("RA    : %lld\n", vm.reg[REG_RA].as_u64); \*/
 /*    printf("CPSR  : %lld\n", vm.reg[REG_CPSR].as_u64); \*/
 /*    printf("FP    : %lld\n", vm.reg[REG_FP].as_u64); \*/
 /*    printf("SP--  : %lld\n", vm.reg[REG_SP].as_u64); \*/
 /*  } while (0)*/
 
 void vm_execute(void) {
-  int end = 300;
-  while (end-- != 0) {
+  while (1) {
     const Inst inst = vm.program[vm.ip++];
     Word word_one;
     Word word_two;

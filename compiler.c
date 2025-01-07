@@ -442,6 +442,9 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
   Fn *fn = compiler_fn_resolve(compiler, &label);
   uint8_t arity = fn->arity;
 
+  // ldr fp
+  PUSH_INST(MAKE_LDR(REG_FP));
+
   // ldr ra
   PUSH_INST(MAKE_LDR(REG_RA));
 
@@ -495,6 +498,9 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
 
   // str ra
   PUSH_INST(MAKE_STR(REG_RA));
+
+  // str fp
+  PUSH_INST(MAKE_STR(REG_FP));
 
   // ldr rax
   PUSH_INST(MAKE_LDR(REG_RAX));
