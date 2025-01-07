@@ -11,6 +11,10 @@ $ ./main
 ( -.-)  
 o\\\_(")(")
 
-- Hash_Table return NULL, not exit
-- Little bit of clean up
+- Err handling using VA_ARGS
 - Or, And operand
+
+- Type checking
+- Dead code elimination
+- LVN
+- |>

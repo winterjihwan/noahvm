@@ -19,14 +19,14 @@ typedef enum {
   INST_LT,
   INST_PRINT,
   INST_PRINTS,
-  INST_NEGATE,
-  INST_DEF_GLOBAL,
-  INST_DEF_LOCAL,
-  INST_VAR_GLOBAL,
-  INST_VAR_LOCAL,
-  INST_JMP_ABS,
-  INST_JMP_T,
-  INST_JMP_NT,
+  INST_NEG,
+  INST_DEFG,
+  INST_DEFL,
+  INST_VARG,
+  INST_VARL,
+  INST_JMPA,
+  INST_JMPT,
+  INST_JMPNT,
   INST_RET,
   INST_LDR,
   INST_STR,
@@ -90,39 +90,39 @@ typedef struct {
   (Inst) { .type = INST_GT }
 #define MAKE_LT                                                                \
   (Inst) { .type = INST_LT }
-#define MAKE_NEGATE                                                            \
-  (Inst) { .type = INST_NEGATE }
-#define MAKE_DEF_GLOBAL(label)                                                 \
+#define MAKE_NEG                                                               \
+  (Inst) { .type = INST_NEG }
+#define MAKE_DEFG(label)                                                       \
   (Inst) {                                                                     \
-    .type = INST_DEF_GLOBAL, .operand = {.as_sv = label }                      \
+    .type = INST_DEFG, .operand = {.as_sv = label }                            \
   }
-#define MAKE_DEF_LOCAL(offset)                                                 \
+#define MAKE_DEFL(offset)                                                      \
   (Inst) {                                                                     \
-    .type = INST_DEF_LOCAL, .operand = {.as_u64 = offset }                     \
+    .type = INST_DEFL, .operand = {.as_u64 = offset }                          \
   }
-#define MAKE_VAR_GLOBAL(name)                                                  \
+#define MAKE_VARG(name)                                                        \
   (Inst) {                                                                     \
-    .type = INST_VAR_GLOBAL, .operand = {.as_sv = name }                       \
+    .type = INST_VARG, .operand = {.as_sv = name }                             \
   }
-#define MAKE_VAR_LOCAL(offset)                                                 \
+#define MAKE_VARL(offset)                                                      \
   (Inst) {                                                                     \
-    .type = INST_VAR_LOCAL, .operand = {.as_u64 = offset }                     \
+    .type = INST_VARL, .operand = {.as_u64 = offset }                          \
   }
 #define MAKE_PRINT                                                             \
   (Inst) { .type = INST_PRINT }
 #define MAKE_PRINTS                                                            \
   (Inst) { .type = INST_PRINTS }
-#define MAKE_JMP_ABS(offset)                                                   \
+#define MAKE_JMPA(offset)                                                      \
   (Inst) {                                                                     \
-    .type = INST_JMP_ABS, .operand = {.as_u64 = offset }                       \
+    .type = INST_JMPA, .operand = {.as_u64 = offset }                          \
   }
-#define MAKE_JMP_T(offset)                                                     \
+#define MAKE_JMPT(offset)                                                      \
   (Inst) {                                                                     \
-    .type = INST_JMP_T, .operand = {.as_u64 = offset }                         \
+    .type = INST_JMPT, .operand = {.as_u64 = offset }                          \
   }
-#define MAKE_JMP_NT(offset)                                                    \
+#define MAKE_JMPNT(offset)                                                     \
   (Inst) {                                                                     \
-    .type = INST_JMP_NT, .operand = {.as_u64 = offset }                        \
+    .type = INST_JMPNT, .operand = {.as_u64 = offset }                         \
   }
 #define MAKE_RET                                                               \
   (Inst) { .type = INST_RET }

@@ -14,9 +14,11 @@ void vm_init(void) {
   vm.program_size = 0;
   vm.env = hash_table_new();
 
+  vm.reg[REG_IP].as_u64 = 0;
   vm.reg[REG_FP].as_u64 = 0;
   vm.reg[REG_SP].as_u64 = 0;
   vm.reg[REG_RA].as_u64 = 0;
+  vm.reg[REG_CPSR].as_u64 = 0;
 }
 
 void vm_destruct(void) { hash_table_destruct(&vm.env); }
@@ -57,21 +59,21 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "\tlt";
   case INST_PRINT:
     return "\tprint";
-  case INST_NEGATE:
+  case INST_NEG:
     return "\tneg";
-  case INST_DEF_GLOBAL:
+  case INST_DEFG:
     return "\tdefg";
-  case INST_DEF_LOCAL:
+  case INST_DEFL:
     return "\tdefl";
-  case INST_VAR_GLOBAL:
+  case INST_VARG:
     return "\tvarg";
-  case INST_VAR_LOCAL:
+  case INST_VARL:
     return "\tvarl";
-  case INST_JMP_ABS:
+  case INST_JMPA:
     return "\tjmpa";
-  case INST_JMP_T:
+  case INST_JMPT:
     return "\tjmpt";
-  case INST_JMP_NT:
+  case INST_JMPNT:
     return "\tjmpnt";
   case INST_RET:
     return "\tret";
@@ -144,41 +146,41 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
         {
             .has_operand = 0,
         },
-    [INST_NEGATE] =
+    [INST_NEG] =
         {
             .has_operand = 0,
         },
-    [INST_DEF_GLOBAL] =
+    [INST_DEFG] =
         {
             .has_operand = 1,
             .operand_type = WORD_SV,
         },
-    [INST_DEF_LOCAL] =
+    [INST_DEFL] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
         },
-    [INST_VAR_GLOBAL] =
+    [INST_VARG] =
         {
             .has_operand = 1,
             .operand_type = WORD_SV,
         },
-    [INST_VAR_LOCAL] =
+    [INST_VARL] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
         },
-    [INST_JMP_ABS] =
+    [INST_JMPA] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
         },
-    [INST_JMP_T] =
+    [INST_JMPT] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
         },
-    [INST_JMP_NT] =
+    [INST_JMPNT] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
@@ -315,7 +317,6 @@ void vm_execute(void) {
 #endif
 
   while (n) {
-
     const Inst inst = vm.program[vm.reg[REG_IP].as_u64++];
     Word word_one;
     Word word_two;
@@ -467,14 +468,14 @@ void vm_execute(void) {
       printf("%.*s\n", word_one.as_sv.len, word_one.as_sv.str);
       continue;
 
-    case INST_NEGATE:
+    case INST_NEG:
       assert(vm.stack_count > 0 && "Stack underflow");
 
       vm.stack[vm.stack_count - 1].as_u64 =
           -vm.stack[vm.stack_count - 1].as_u64;
       continue;
 
-    case INST_DEF_GLOBAL:
+    case INST_DEFG:
       assert(vm.stack_count > 0 && "Stack underflow");
 
       Sv assign_name = inst.operand.as_sv;
@@ -484,7 +485,7 @@ void vm_execute(void) {
       hash_table_insert(&vm.env, assign_name, value);
       continue;
 
-    case INST_DEF_LOCAL:
+    case INST_DEFL:
       assert(vm.stack_count > 0 && "Stack underflow");
 
       uint64_t def_offset = inst.operand.as_u64;
@@ -496,7 +497,7 @@ void vm_execute(void) {
 
       continue;
 
-    case INST_VAR_GLOBAL:
+    case INST_VARG:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
       Sv var_name = inst.operand.as_sv;
@@ -507,7 +508,7 @@ void vm_execute(void) {
       SP_INCREMENT;
       continue;
 
-    case INST_VAR_LOCAL:
+    case INST_VARL:
       assert(vm.stack_count + 1 < VM_STACK_CAP && "Stack overflow");
 
       uint64_t var_offset = inst.operand.as_u64;
@@ -519,14 +520,14 @@ void vm_execute(void) {
       SP_INCREMENT;
       continue;
 
-    case INST_JMP_ABS:;
+    case INST_JMPA:;
       jmp_offset = inst.operand.as_u64;
       assert(jmp_offset < vm.program_size && "Program illegal access");
 
       vm.reg[REG_IP].as_u64 = jmp_offset;
       continue;
 
-    case INST_JMP_T:;
+    case INST_JMPT:;
       assert(vm.stack_count > 0 && "Stack underflow");
 
       eq = vm.stack[vm.stack_count-- - 1].as_u64;
@@ -540,7 +541,7 @@ void vm_execute(void) {
 
       continue;
 
-    case INST_JMP_NT:;
+    case INST_JMPNT:;
       assert(vm.stack_count > 0 && "Stack underflow");
 
       eq = vm.stack[vm.stack_count-- - 1].as_u64;

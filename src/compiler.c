@@ -179,9 +179,9 @@ static void compiler_emit_ir(Compiler *compiler, const Token *lhs) {
     int offset = compiler_var_resolve(compiler, &name);
 
     if (offset == -1) {
-      PUSH_INST(MAKE_VAR_GLOBAL(name));
+      PUSH_INST(MAKE_VARG(name));
     } else {
-      PUSH_INST(MAKE_VAR_LOCAL(offset));
+      PUSH_INST(MAKE_VARL(offset));
     }
   }
 }
@@ -209,7 +209,7 @@ static void compiler_expr_bp(Compiler *compiler, Token *tokens,
     uint8_t pre_bp = PRED_TABLE[lhs->type].pre_power;
     compiler_expr_bp(compiler, tokens, pre_bp);
 
-    PUSH_INST(MAKE_NEGATE);
+    PUSH_INST(MAKE_NEG);
   } else if (lhs->type == Token_LParen) {
     compiler_expr_bp(compiler, tokens, 0);
 
@@ -284,11 +284,13 @@ static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
 
   int offset = compiler_var_resolve(compiler, &name);
   if (offset == -1) {
-    PUSH_INST(MAKE_DEF_GLOBAL(name));
+    // defg #name
+    PUSH_INST(MAKE_DEFG(name));
 
   } else {
+    // defl #name
+    PUSH_INST(MAKE_DEFL(compiler->locals_count - 1));
     LOCAL_ADD(name, compiler->depth);
-    PUSH_INST(MAKE_DEF_LOCAL(compiler->locals_count - 1));
   }
 
   PUSH_INST(MAKE_POP);
@@ -344,14 +346,16 @@ static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
   compiler_expr(compiler, tokens);
   MUNCH_TOKEN(Token_RParen);
 
-  PUSH_INST(MAKE_JMP_NT(-1));
+  // jmpnt #offset
+  PUSH_INST(MAKE_JMPNT(-1));
   uint64_t then_start_pos = LOC_INST;
 
   compiler_stmt_block(compiler, tokens);
   uint64_t then_end_pos = LOC_INST;
 
-  ALTER_INST(then_start_pos - 1, MAKE_JMP_NT(then_end_pos + 1));
-  PUSH_INST(MAKE_JMP_ABS(then_end_pos + 1));
+  // jmpa #offset
+  PUSH_INST(MAKE_JMPA(then_end_pos + 1));
+  ALTER_INST(then_start_pos - 1, MAKE_JMPNT(then_end_pos + 1));
 
   if (PEEK_TOKEN_TYPE == Token_Else) {
     MUNCH_TOKEN(Token_Else);
@@ -359,7 +363,7 @@ static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
     compiler_stmt_block(compiler, tokens);
 
     uint64_t else_end_pos = LOC_INST;
-    ALTER_INST(then_end_pos, MAKE_JMP_ABS(else_end_pos));
+    ALTER_INST(then_end_pos, MAKE_JMPA(else_end_pos));
   }
 }
 
@@ -374,14 +378,17 @@ static void compiler_stmt_while(Compiler *compiler, Token *tokens) {
 
   MUNCH_TOKEN(Token_RParen);
 
-  PUSH_INST(MAKE_JMP_NT(-1));
+  // jmpnt #offset
+  PUSH_INST(MAKE_JMPNT(-1));
   uint64_t while_start_pos = LOC_INST;
 
   compiler_stmt_block(compiler, tokens);
-  PUSH_INST(MAKE_JMP_ABS(while_pred_start_pos));
+
+  // jmpa #offset
+  PUSH_INST(MAKE_JMPA(while_pred_start_pos));
 
   uint64_t while_end_pos = LOC_INST;
-  ALTER_INST(while_start_pos - 1, MAKE_JMP_NT(while_end_pos));
+  ALTER_INST(while_start_pos - 1, MAKE_JMPNT(while_end_pos));
 }
 
 static Compiler *compiler_call_new(Compiler *compiler, Sv name) {
@@ -426,7 +433,8 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
       .len = identifier->len,
   };
 
-  PUSH_INST(MAKE_JMP_ABS(-1));
+  // jmpa -1
+  PUSH_INST(MAKE_JMPA(-1));
 
   uint64_t label_start_pos = LOC_INST;
   uint8_t arity = 0;
@@ -473,8 +481,9 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   }
 
   compiler->locals_count -= arity;
+
   uint64_t label_end_pos = LOC_INST;
-  ALTER_INST(label_start_pos - 1, MAKE_JMP_ABS(label_end_pos));
+  ALTER_INST(label_start_pos - 1, MAKE_JMPA(label_end_pos));
 }
 
 static Fn *compiler_fn_resolve(Compiler *compiler, Sv *label) {
@@ -539,7 +548,7 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
   PUSH_INST(MAKE_STR(REG_RA));
 
   // jmp label
-  PUSH_INST(MAKE_JMP_ABS(fn->label_pos));
+  PUSH_INST(MAKE_JMPA(fn->label_pos));
 
   // Post call
   for (size_t i = 0; i < fn->arity; i++) {
@@ -577,7 +586,10 @@ static void compiler_stmt_return(Compiler *compiler, Token *tokens) {
     compiler_expr(compiler, tokens);
   }
 
+  // str rax
   PUSH_INST(MAKE_STR(REG_RAX));
+
+  // ret
   PUSH_INST(MAKE_RET);
 
   MUNCH_TOKEN(Token_Semicolon);
