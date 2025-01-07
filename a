@@ -1,7 +1,7 @@
-if (3 == 3){
-	print 3;
-}else {
-	print 4;
+fn add(int a, int b){
+	print a;
+	print b;
+	return a + b;
 }
 
-print 5;
+print add(1, 2) + 3;

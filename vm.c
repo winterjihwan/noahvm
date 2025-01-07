@@ -12,6 +12,10 @@ void vm_init(void) {
   vm.stack_count = 0;
   vm.program_size = 0;
   vm.env = hash_table_new();
+
+  vm.reg[REG_FP].as_u64 = 0;
+  vm.reg[REG_SP].as_u64 = 0;
+  vm.reg[REG_RA].as_u64 = 0;
 }
 
 void vm_destruct(void) { hash_table_destruct(&vm.env); }
@@ -30,49 +34,51 @@ void vm_program_load_from_memory(Inst *insts, size_t insts_count) {
 char *vm_inst_t_to_str(Inst_t type) {
   switch (type) {
   case INST_PUSH:
-    return "push";
+    return "\tpush";
   case INST_POP:
-    return "pop";
+    return "\tpop";
   case INST_PLUS:
-    return "plus";
+    return "\tplus";
   case INST_PLUSF:
-    return "plusf";
+    return "\tplusf";
   case INST_MINUS:
-    return "minus";
+    return "\tminus";
   case INST_MULT:
-    return "mult";
+    return "\tmult";
   case INST_DIV:
-    return "div";
+    return "\tdiv";
   case INST_EQ:
-    return "eq";
+    return "\teq";
   case INST_PRINT:
-    return "print";
+    return "\tprint";
   case INST_NEGATE:
-    return "negate";
+    return "\tnegate";
   case INST_DEF_GLOBAL:
-    return "def_global";
+    return "\tdef_global";
   case INST_DEF_LOCAL:
-    return "def_local";
+    return "\tdef_local";
   case INST_VAR_GLOBAL:
-    return "var_global";
+    return "\tvar_global";
   case INST_VAR_LOCAL:
-    return "var_local";
+    return "\tvar_local";
   case INST_JMP_ABS:
-    return "jmp_abs";
+    return "\tjmp_abs";
   case INST_JMP_EQ:
-    return "jmp_eq";
+    return "\tjmp_eq";
   case INST_JMP_NE:
-    return "jmp_ne";
+    return "\tjmp_ne";
   case INST_RET:
-    return "ret";
+    return "\tret";
   case INST_LDR:
-    return "ldr";
+    return "\tldr";
   case INST_STR:
-    return "str";
+    return "\tstr";
   case INST_MOV:
-    return "mov";
+    return "\tmov";
+  case INST_LABEL:
+    return "Fn ";
   case INST_EOF:
-    return "eof";
+    return "\teof";
   default:
     __builtin_unreachable();
   }
@@ -162,17 +168,22 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
     [INST_LDR] =
         {
             .has_operand = 1,
-            .operand_type = WORD_U64,
+            .operand_type = WORD_REG,
         },
     [INST_STR] =
         {
             .has_operand = 1,
-            .operand_type = WORD_U64,
+            .operand_type = WORD_REG,
         },
     [INST_MOV] =
         {
             .has_operand = 1,
-            .operand_type = WORD_U64,
+            .operand_type = WORD_REG,
+        },
+    [INST_LABEL] =
+        {
+            .has_operand = 1,
+            .operand_type = WORD_ANY,
         },
     [INST_EOF] =
         {
@@ -188,12 +199,32 @@ void vm_stack_dump(void) {
   printf("-----\n\n");
 }
 
+__attribute__((unused)) static char *vm_word_reg_translate(uint64_t reg_no) {
+  switch (reg_no) {
+  case 11:
+    return (char *)"fp";
+  case 12:
+    return (char *)"sp";
+  case 13:
+    return (char *)"ra";
+  case 14:
+    return (char *)"rax";
+  case 15:
+    return (char *)"cpsr";
+  default:
+    __builtin_unreachable();
+  }
+}
+
 static void vm_inst_dump(const Inst *inst) {
   printf("%s ", vm_inst_t_to_str(inst->type));
   if (INST_CONTEXTS[inst->type].has_operand) {
     switch (INST_CONTEXTS[inst->type].operand_type) {
     case WORD_ANY:
       printf("%lld", inst->operand.as_u64);
+      break;
+    case WORD_REG:
+      printf("%s", vm_word_reg_translate(inst->operand.as_u64));
       break;
     case WORD_U64:
       printf("%lld", inst->operand.as_u64);
@@ -219,6 +250,7 @@ void vm_program_dump(void) {
   printf("Program: \n");
   for (size_t i = 0; i < (size_t)vm.program_size; i++) {
     Inst *inst = &vm.program[i];
+    printf("%zu: ", i);
     vm_inst_dump(inst);
   }
   printf("-----\n\n");
@@ -226,8 +258,24 @@ void vm_program_dump(void) {
 
 Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 
-#define SP_INCREMENT vm.reg[REG_SP].as_u64++
-#define SP_DECREMENT vm.reg[REG_SP].as_u64--
+#define SP_INCREMENT vm.reg[REG_SP].as_u64++;
+#define SP_DECREMENT vm.reg[REG_SP].as_u64--;
+/*#define SP_INCREMENT \*/
+/*  do { \*/
+/*    vm.reg[REG_SP].as_u64++; \*/
+/*    printf("IP    : %lld\n", vm.ip); \*/
+/*    printf("CPSR  : %lld\n", vm.reg[REG_CPSR].as_u64); \*/
+/*    printf("FP    : %lld\n", vm.reg[REG_FP].as_u64); \*/
+/*    printf("SP++  : %lld\n", vm.reg[REG_SP].as_u64); \*/
+/*  } while (0)*/
+/*#define SP_DECREMENT \*/
+/*  do { \*/
+/*    vm.reg[REG_SP].as_u64--; \*/
+/*    printf("IP    : %lld\n", vm.ip); \*/
+/*    printf("CPSR  : %lld\n", vm.reg[REG_CPSR].as_u64); \*/
+/*    printf("FP    : %lld\n", vm.reg[REG_FP].as_u64); \*/
+/*    printf("SP--  : %lld\n", vm.reg[REG_SP].as_u64); \*/
+/*  } while (0)*/
 
 void vm_execute(void) {
   int end = 90;
@@ -369,6 +417,7 @@ void vm_execute(void) {
       fp = vm.reg[REG_FP].as_u64;
       assert(var_offset < vm.stack_count && "Stack illegal access");
 
+      assert(var_offset < vm.stack_count && "Program illegal access");
       vm.stack[vm.stack_count++] = vm.stack[fp + var_offset];
       SP_INCREMENT;
       continue;

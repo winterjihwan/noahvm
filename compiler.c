@@ -23,7 +23,7 @@ void compiler_init(Compiler *compiler) {
   compiler->enclosing = NULL;
 }
 
-static void compiler_locals_dump(Compiler *compiler) {
+__attribute__((unused)) static void compiler_locals_dump(Compiler *compiler) {
   printf("Locals: \n");
   for (size_t i = 0; i < compiler->locals_count; i++) {
     Local *local = &compiler->locals[i];
@@ -289,25 +289,18 @@ static void compiler_stmt(Compiler *compiler, Token *tokens);
     MUNCH_TOKEN(Token_RBrace);                                                 \
   } while (0)
 
-static int BLOCK_RETURNED = 0;
-// TODO: BLOCK_RETURNED, is_fn is unpretty
-static void compiler_stmt_block(Compiler *compiler, Token *tokens, int is_fn) {
+static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
   ENTER_SCOPE;
 
   uint8_t locals_count_prev = compiler->locals_count;
 
-  while (!BLOCK_RETURNED) {
+  while (1) {
     Token *peek = PEEK_TOKEN;
     if (peek->type == Token_EOF || peek->type == Token_RBrace)
       break;
 
     compiler_stmt(compiler, tokens);
   }
-  BLOCK_RETURNED = 0;
-
-  // TODO: can i move this somewhere else?
-  if (is_fn)
-    PUSH_INST(MAKE_STR(REG_RAX));
 
   for (size_t i = 0; i < compiler->locals_count - locals_count_prev; i++) {
     PUSH_INST(MAKE_POP);
@@ -327,7 +320,7 @@ static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
   PUSH_INST(MAKE_JMP_NE(-1));
   uint64_t then_start_pos = compiler->ir->insts_count;
 
-  compiler_stmt_block(compiler, tokens, 0);
+  compiler_stmt_block(compiler, tokens);
 
   uint64_t then_end_pos = compiler->ir->insts_count;
 
@@ -337,7 +330,7 @@ static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
   if (PEEK_TOKEN_TYPE == Token_Else) {
     MUNCH_TOKEN(Token_Else);
 
-    compiler_stmt_block(compiler, tokens, 0);
+    compiler_stmt_block(compiler, tokens);
 
     uint64_t else_end_pos = compiler->ir->insts_count;
     ALTER_INST(then_end_pos, MAKE_JMP_ABS(else_end_pos));
@@ -386,6 +379,7 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   };
 
   PUSH_INST(MAKE_JMP_ABS(-1));
+  /*PUSH_INST(MAKE_LABEL(label));*/
 
   uint64_t label_start_pos = compiler->ir->insts_count;
   uint8_t arity = 0;
@@ -419,9 +413,7 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   FN_DECLARE(label, label_start_pos, arity);
 
   // Mid
-  compiler_stmt_block(compiler, tokens, 1);
-
-  PUSH_INST(MAKE_RET);
+  compiler_stmt_block(compiler, tokens);
 
   // Post
   compiler->locals_count -= arity;
@@ -450,9 +442,12 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
   Fn *fn = compiler_fn_resolve(compiler, &label);
   uint8_t arity = fn->arity;
 
-  // mov fp, sp
+  // ldr ra
+  PUSH_INST(MAKE_LDR(REG_RA));
+
+  // mov cpsr, sp
   PUSH_INST(MAKE_PUSH((Word){.as_u64 = REG_SP}));
-  PUSH_INST(MAKE_MOV(REG_FP));
+  PUSH_INST(MAKE_MOV(REG_CPSR));
 
   MUNCH_TOKEN(Token_LParen);
 
@@ -475,6 +470,10 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
     MUNCH_TOKEN(Token_Comma);
   }
 
+  // mov fp, cpsr
+  PUSH_INST(MAKE_PUSH((Word){.as_u64 = REG_CPSR}));
+  PUSH_INST(MAKE_MOV(REG_FP));
+
   // str ra, #offset
   uint64_t ra = compiler->ir->insts_count + 3;
   PUSH_INST(MAKE_PUSH((Word){.as_u64 = ra}));
@@ -483,7 +482,7 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
   // jmp label
   PUSH_INST(MAKE_JMP_ABS(fn->label_pos));
 
-  // Post
+  // Post call
   for (size_t i = 0; i < fn->arity; i++) {
     PUSH_INST(MAKE_POP);
   }
@@ -493,6 +492,9 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
   // mov sp, fp
   PUSH_INST(MAKE_PUSH((Word){.as_u64 = REG_FP}));
   PUSH_INST(MAKE_MOV(REG_SP));
+
+  // str ra
+  PUSH_INST(MAKE_STR(REG_RA));
 
   // ldr rax
   PUSH_INST(MAKE_LDR(REG_RAX));
@@ -511,7 +513,8 @@ static void compiler_stmt_return(Compiler *compiler, Token *tokens) {
     compiler_expr(compiler, tokens);
   }
 
-  BLOCK_RETURNED = 1;
+  PUSH_INST(MAKE_STR(REG_RAX));
+  PUSH_INST(MAKE_RET);
 
   MUNCH_TOKEN(Token_Semicolon);
 }
@@ -533,7 +536,7 @@ static void compiler_stmt(Compiler *compiler, Token *tokens) {
     compiler_stmt_print(compiler, tokens);
 
   } else if (peek_type == Token_LBrace) {
-    compiler_stmt_block(compiler, tokens, 0);
+    compiler_stmt_block(compiler, tokens);
 
   } else if (peek_type == Token_Fn) {
     compiler_stmt_fn(compiler, tokens);

@@ -27,6 +27,7 @@ typedef enum {
   INST_LDR,
   INST_STR,
   INST_MOV,
+  INST_LABEL,
   INST_EOF,
 } Inst_t;
 
@@ -57,9 +58,10 @@ typedef struct {
 
   // TODO: IP as reg
 #define REG_FP 11
-#define REG_SP 13
+#define REG_SP 12
 #define REG_RA 13
 #define REG_RAX 14
+#define REG_CPSR 15
   Word reg[16];
 } Vm;
 
@@ -124,6 +126,10 @@ typedef struct {
 #define MAKE_MOV(reg_no)                                                       \
   (Inst) {                                                                     \
     .type = INST_MOV, .operand = {.as_u64 = reg_no }                           \
+  }
+#define MAKE_LABEL(label)                                                      \
+  (Inst) {                                                                     \
+    .type = INST_MOV, .operand = {.as_sv = label }                             \
   }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }

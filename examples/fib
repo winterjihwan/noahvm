@@ -1,6 +1,11 @@
-fn a(){
-	print 3;
-	return;
+fn fib(int a){
+	if (a == 1) {
+		return 1;
+	}
+
+	print(a);
+
+	return a + fib(a - 1);
 }
 
-a();
+print fib(2);

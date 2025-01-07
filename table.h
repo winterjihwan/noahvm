@@ -16,6 +16,7 @@ typedef struct {
 
 typedef enum {
   WORD_ANY,
+  WORD_REG,
   WORD_U64,
   WORD_I64,
   WORD_F64,
