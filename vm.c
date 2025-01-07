@@ -52,21 +52,21 @@ char *vm_inst_t_to_str(Inst_t type) {
   case INST_PRINT:
     return "\tprint";
   case INST_NEGATE:
-    return "\tnegate";
+    return "\tneg";
   case INST_DEF_GLOBAL:
-    return "\tdef_global";
+    return "\tdefg";
   case INST_DEF_LOCAL:
-    return "\tdef_local";
+    return "\tdefl";
   case INST_VAR_GLOBAL:
-    return "\tvar_global";
+    return "\tvarg";
   case INST_VAR_LOCAL:
-    return "\tvar_local";
+    return "\tvarl";
   case INST_JMP_ABS:
-    return "\tjmp_abs";
+    return "\tjmpa";
   case INST_JMP_EQ:
-    return "\tjmp_eq";
+    return "\tjmpeq";
   case INST_JMP_NE:
-    return "\tjmp_ne";
+    return "\tjmpne";
   case INST_RET:
     return "\tret";
   case INST_LDR:
@@ -76,7 +76,7 @@ char *vm_inst_t_to_str(Inst_t type) {
   case INST_MOV:
     return "\tmov";
   case INST_LABEL:
-    return "Fn ";
+    return "Fn";
   case INST_EOF:
     return "\teof";
   default:
@@ -183,7 +183,7 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
     [INST_LABEL] =
         {
             .has_operand = 1,
-            .operand_type = WORD_ANY,
+            .operand_type = WORD_SV,
         },
     [INST_EOF] =
         {
@@ -250,7 +250,9 @@ void vm_program_dump(void) {
   printf("Program: \n");
   for (size_t i = 0; i < (size_t)vm.program_size; i++) {
     Inst *inst = &vm.program[i];
+#ifdef DEBUG
     printf("%zu: ", i);
+#endif
     vm_inst_dump(inst);
   }
   printf("-----\n\n");
@@ -258,29 +260,39 @@ void vm_program_dump(void) {
 
 Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 
+#ifndef DEBUG
 #define SP_INCREMENT vm.reg[REG_SP].as_u64++;
 #define SP_DECREMENT vm.reg[REG_SP].as_u64--;
-/*#define SP_INCREMENT \*/
-/*  do { \*/
-/*    vm.reg[REG_SP].as_u64++; \*/
-/*    printf("IP    : %lld\n", vm.ip); \*/
-/*    printf("RA    : %lld\n", vm.reg[REG_RA].as_u64); \*/
-/*    printf("CPSR  : %lld\n", vm.reg[REG_CPSR].as_u64); \*/
-/*    printf("FP    : %lld\n", vm.reg[REG_FP].as_u64); \*/
-/*    printf("SP++  : %lld\n", vm.reg[REG_SP].as_u64); \*/
-/*  } while (0)*/
-/*#define SP_DECREMENT \*/
-/*  do { \*/
-/*    vm.reg[REG_SP].as_u64--; \*/
-/*    printf("IP    : %lld\n", vm.ip); \*/
-/*    printf("RA    : %lld\n", vm.reg[REG_RA].as_u64); \*/
-/*    printf("CPSR  : %lld\n", vm.reg[REG_CPSR].as_u64); \*/
-/*    printf("FP    : %lld\n", vm.reg[REG_FP].as_u64); \*/
-/*    printf("SP--  : %lld\n", vm.reg[REG_SP].as_u64); \*/
-/*  } while (0)*/
+#else
+#define SP_INCREMENT                                                           \
+  do {                                                                         \
+    vm.reg[REG_SP].as_u64++;                                                   \
+    printf("IP    : %lld\n", vm.ip);                                           \
+    printf("RA    : %lld\n", vm.reg[REG_RA].as_u64);                           \
+    printf("CPSR  : %lld\n", vm.reg[REG_CPSR].as_u64);                         \
+    printf("FP    : %lld\n", vm.reg[REG_FP].as_u64);                           \
+    printf("SP++  : %lld\n", vm.reg[REG_SP].as_u64);                           \
+  } while (0)
+#define SP_DECREMENT                                                           \
+  do {                                                                         \
+    vm.reg[REG_SP].as_u64--;                                                   \
+    printf("IP    : %lld\n", vm.ip);                                           \
+    printf("RA    : %lld\n", vm.reg[REG_RA].as_u64);                           \
+    printf("CPSR  : %lld\n", vm.reg[REG_CPSR].as_u64);                         \
+    printf("FP    : %lld\n", vm.reg[REG_FP].as_u64);                           \
+    printf("SP--  : %lld\n", vm.reg[REG_SP].as_u64);                           \
+  } while (0)
+#endif
 
 void vm_execute(void) {
-  while (1) {
+  int n = 1;
+
+#ifdef DEBUG
+  n = 100;
+#endif
+
+  while (n) {
+
     const Inst inst = vm.program[vm.ip++];
     Word word_one;
     Word word_two;
@@ -288,8 +300,11 @@ void vm_execute(void) {
     uint64_t jmp_offset;
     uint64_t fp;
 
-    /*vm_stack_dump();*/
-    /*vm_inst_dump(&inst);*/
+#ifdef DEBUG
+    n--;
+    vm_stack_dump();
+    vm_inst_dump(&inst);
+#endif
 
     switch (inst.type) {
     case INST_PUSH:
@@ -482,6 +497,9 @@ void vm_execute(void) {
       vm.stack[vm.stack_count++] = vm.reg[reg_no];
       SP_INCREMENT;
 
+      continue;
+
+    case INST_LABEL:
       continue;
 
     case INST_MOV:

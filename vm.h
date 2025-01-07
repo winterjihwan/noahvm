@@ -51,6 +51,8 @@ typedef struct {
   uint64_t program_size;
   Addr ip;
 
+  int debug;
+
   Word stack[VM_STACK_CAP];
   uint64_t stack_count;
 
@@ -129,7 +131,7 @@ typedef struct {
   }
 #define MAKE_LABEL(label)                                                      \
   (Inst) {                                                                     \
-    .type = INST_MOV, .operand = {.as_sv = label }                             \
+    .type = INST_LABEL, .operand = {.as_sv = label }                           \
   }
 #define MAKE_EOF                                                               \
   (Inst) { .type = INST_EOF }

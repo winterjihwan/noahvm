@@ -379,7 +379,6 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   };
 
   PUSH_INST(MAKE_JMP_ABS(-1));
-  /*PUSH_INST(MAKE_LABEL(label));*/
 
   uint64_t label_start_pos = compiler->ir->insts_count;
   uint8_t arity = 0;

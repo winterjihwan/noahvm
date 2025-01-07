@@ -1,7 +1,19 @@
-fn add(int a, int b){
-	print a;
-	print b;
-	return a + b;
+fn main() {
+	fn fib(int n){
+		if (n == 1) {
+			return 1;
+		}
+	
+		if (n == 0) {
+			return 0;
+		}
+	
+		return fib(n-1) + fib(n-2);
+	}
+
+	print fib(10);
+
+	return;
 }
 
-print add(1, 2) + 3;
+main();

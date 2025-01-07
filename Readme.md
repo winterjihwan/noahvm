@@ -13,4 +13,6 @@ o\\\_(")(")
 
 - Hash_Table return NULL, not exit
 - Little bit of clean up
-- Stack pointer register
+- IP as register
+- Or, And operand
+- While inst
