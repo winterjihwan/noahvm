@@ -50,16 +50,13 @@ typedef uint64_t Addr;
 typedef struct {
   Inst program[PROGRAM_STACK_CAP];
   uint64_t program_size;
-  Addr ip;
-
-  int debug;
 
   Word stack[VM_STACK_CAP];
   uint64_t stack_count;
 
   Hash_Table env;
 
-  // TODO: IP as reg
+#define REG_IP 10
 #define REG_FP 11
 #define REG_SP 12
 #define REG_RA 13

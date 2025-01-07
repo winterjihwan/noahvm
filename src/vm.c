@@ -10,7 +10,6 @@
 Vm vm = {0};
 
 void vm_init(void) {
-  vm.ip = 0;
   vm.stack_count = 0;
   vm.program_size = 0;
   vm.env = hash_table_new();
@@ -26,11 +25,10 @@ void vm_program_load_from_memory(Inst *insts, size_t insts_count) {
   assert(insts_count < PROGRAM_STACK_CAP);
 
   for (size_t i = 0; i < insts_count; i++) {
-    vm.program[vm.ip++] = insts[i];
+    vm.program[i] = insts[i];
   }
 
-  vm.program_size = vm.ip;
-  vm.ip = 0;
+  vm.program_size = insts_count;
 }
 
 char *vm_inst_t_to_str(Inst_t type) {
@@ -296,14 +294,13 @@ inline static Word vm_env_resolve(const Sv label) {
 
 void vm_execute(void) {
   int n = 1;
-
 #ifdef DEBUG
   n = 100;
 #endif
 
   while (n) {
 
-    const Inst inst = vm.program[vm.ip++];
+    const Inst inst = vm.program[vm.reg[REG_IP].as_u64++];
     Word word_one;
     Word word_two;
     uint64_t reg_no;
@@ -469,7 +466,7 @@ void vm_execute(void) {
       jmp_offset = inst.operand.as_u64;
       assert(jmp_offset < vm.program_size && "Program illegal access");
 
-      vm.ip = jmp_offset;
+      vm.reg[REG_IP].as_u64 = jmp_offset;
       continue;
 
     case INST_JMP_T:;
@@ -482,7 +479,7 @@ void vm_execute(void) {
       assert(jmp_offset < vm.program_size && "Program illegal access");
 
       if (eq)
-        vm.ip = jmp_offset;
+        vm.reg[REG_IP].as_u64 = jmp_offset;
 
       continue;
 
@@ -496,12 +493,12 @@ void vm_execute(void) {
       assert(jmp_offset < vm.program_size && "Program illegal access");
 
       if (!eq)
-        vm.ip = jmp_offset;
+        vm.reg[REG_IP].as_u64 = jmp_offset;
 
       continue;
 
     case INST_RET:
-      vm.ip = vm.reg[REG_RA].as_u64;
+      vm.reg[REG_IP].as_u64 = vm.reg[REG_RA].as_u64;
 
       continue;
 
