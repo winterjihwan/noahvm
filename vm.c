@@ -278,7 +278,7 @@ Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
 /*  } while (0)*/
 
 void vm_execute(void) {
-  int end = 90;
+  int end = 300;
   while (end-- != 0) {
     const Inst inst = vm.program[vm.ip++];
     Word word_one;
