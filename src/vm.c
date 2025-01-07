@@ -407,7 +407,8 @@ void vm_execute(void) {
       assert(vm.stack_count > 0 && "Stack underflow");
 
       word_one = vm.stack[vm.stack_count - 1];
-      printf("%lld\n", word_one.as_u64);
+      printf("as_u64:\t%lld\n", word_one.as_u64);
+      printf("as_sv:\t%.*s\n", word_one.as_sv.len, word_one.as_sv.str);
       continue;
 
     case INST_NEGATE:

@@ -175,6 +175,28 @@ inline static void lexer_trim_space(void) {
   }
 }
 
+static void lexer_lex_literal(void) {
+  lexer_lex_token(Token_Quote, 1);
+
+  char *p_code = lexer.code;
+  p_code++;
+  int len = 0;
+
+  while (1) {
+    char c = *p_code;
+    if (c == '\0')
+      break;
+
+    len++;
+    p_code++;
+
+    if (c == '"')
+      break;
+  }
+
+  lexer_lex_token(Token_Literal, len);
+}
+
 void lexer_lex(void) {
   while (1) {
     lexer_trim_space();
@@ -182,6 +204,10 @@ void lexer_lex(void) {
     if (*code == '\0') {
       lexer_lex_token(Token_EOF, 0);
       break;
+    }
+
+    if (*code == '"') {
+      lexer_lex_literal();
     }
 
     if (lexer_lex_keyword()) {
@@ -252,6 +278,9 @@ void lexer_lex(void) {
     case ':':
       lexer_lex_token(Token_Colon, 1);
       continue;
+    case '"':
+      lexer_lex_token(Token_Quote, 1);
+      continue;
     default:
       fprintf(stderr, "ERROR: Unidentifiable character: %c\n", *code);
       exit(2);
@@ -267,6 +296,8 @@ char *lexer_token_t_to_str(const Token_t type) {
     return "Token_RParen";
   case Token_Identifier:
     return "Token_Identifier";
+  case Token_Literal:
+    return "Token_Literal";
   case Token_Number:
     return "Token_Number";
   case Token_Float:
@@ -329,6 +360,8 @@ char *lexer_token_t_to_str(const Token_t type) {
     return "Token_LBrace";
   case Token_RBrace:
     return "Token_RBrace";
+  case Token_Quote:
+    return "Token_Quote";
   case Token_EOF:
     return "Token_EOF";
   default:

@@ -111,9 +111,10 @@ inline static uint64_t compiler_sv_to_f64(const char *str, const int len) {
 #define PEEK_TOKEN &tokens[tokens_pos]
 #define PEEK_TOKEN_TYPE tokens[tokens_pos].type
 #define PEEK_PEEK_TOKEN &tokens[tokens_pos + 1]
+#define LOC_INST compiler->ir->insts_count
 #define PUSH_INST(inst)                                                        \
   do {                                                                         \
-    compiler->ir->insts[compiler->ir->insts_count++] = inst;                   \
+    compiler->ir->insts[LOC_INST++] = inst;                                    \
   } while (0)
 #define ALTER_INST(offset, inst)                                               \
   do {                                                                         \
@@ -147,12 +148,17 @@ static int compiler_var_resolve(Compiler *compiler, const Sv *name) {
 static void compiler_emit_ir(Compiler *compiler, const Token *lhs) {
   if (lhs->type == Token_Number) {
     Word operand = (Word){.as_u64 = compiler_sv_to_u64(lhs->start, lhs->len)};
-
     PUSH_INST(MAKE_PUSH(operand));
+
+  } else if (lhs->type == Token_Literal) {
+    Sv literal = {.len = lhs->len, .str = lhs->start};
+    Word operand = (Word){.as_sv = literal};
+    PUSH_INST(MAKE_PUSH(operand));
+
   } else if (lhs->type == Token_Float) {
     Word operand = (Word){.as_f64 = compiler_sv_to_f64(lhs->start, lhs->len)};
-
     PUSH_INST(MAKE_PUSH(operand));
+
   } else if (lhs->type == Token_Identifier) {
     Sv name = (Sv){
         .str = lhs->start,
@@ -173,6 +179,10 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens,
 static void compiler_expr_bp(Compiler *compiler, Token *tokens,
                              const uint8_t min_bp) {
   Token *lhs = NEXT_TOKEN;
+  if (lhs->type == Token_Quote) {
+    lhs = NEXT_TOKEN;
+    MUNCH_TOKEN(Token_Quote);
+  }
 
   if (PEEK_TOKEN_TYPE == Token_LParen) {
     Sv label = {.len = lhs->len, .str = lhs->start};
@@ -252,14 +262,12 @@ static void compiler_expr_stmt(Compiler *compiler, Token *tokens) {
 static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
   EXPECT_TOKEN(Token_Identifier);
   Token *identifier = NEXT_TOKEN;
-
   Sv name = (Sv){
       .str = identifier->start,
       .len = identifier->len,
   };
 
   MUNCH_TOKEN(Token_Equal);
-
   compiler_expr(compiler, tokens);
 
   int offset = compiler_var_resolve(compiler, &name);
@@ -325,11 +333,10 @@ static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_RParen);
 
   PUSH_INST(MAKE_JMP_NT(-1));
-  uint64_t then_start_pos = compiler->ir->insts_count;
+  uint64_t then_start_pos = LOC_INST;
 
   compiler_stmt_block(compiler, tokens);
-
-  uint64_t then_end_pos = compiler->ir->insts_count;
+  uint64_t then_end_pos = LOC_INST;
 
   ALTER_INST(then_start_pos - 1, MAKE_JMP_NT(then_end_pos + 1));
   PUSH_INST(MAKE_JMP_ABS(then_end_pos + 1));
@@ -339,7 +346,7 @@ static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
 
     compiler_stmt_block(compiler, tokens);
 
-    uint64_t else_end_pos = compiler->ir->insts_count;
+    uint64_t else_end_pos = LOC_INST;
     ALTER_INST(then_end_pos, MAKE_JMP_ABS(else_end_pos));
   }
 }
@@ -348,7 +355,7 @@ static void compiler_stmt_while(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_While);
 
   MUNCH_TOKEN(Token_LParen);
-  uint64_t while_pred_start_pos = compiler->ir->insts_count;
+  uint64_t while_pred_start_pos = LOC_INST;
   compiler_expr(compiler, tokens);
 
   printf("Then what is it? %.*s\n", *PEEK_TOKEN.len, *PEEK_TOKEN.start);
@@ -356,12 +363,12 @@ static void compiler_stmt_while(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_RParen);
 
   PUSH_INST(MAKE_JMP_NT(-1));
-  uint64_t while_start_pos = compiler->ir->insts_count;
+  uint64_t while_start_pos = LOC_INST;
 
   compiler_stmt_block(compiler, tokens);
   PUSH_INST(MAKE_JMP_ABS(while_pred_start_pos));
 
-  uint64_t while_end_pos = compiler->ir->insts_count;
+  uint64_t while_end_pos = LOC_INST;
   ALTER_INST(while_start_pos - 1, MAKE_JMP_NT(while_end_pos));
 }
 
@@ -409,7 +416,7 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
 
   PUSH_INST(MAKE_JMP_ABS(-1));
 
-  uint64_t label_start_pos = compiler->ir->insts_count;
+  uint64_t label_start_pos = LOC_INST;
   uint8_t arity = 0;
 
   MUNCH_TOKEN(Token_LParen);
@@ -454,7 +461,7 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   }
 
   compiler->locals_count -= arity;
-  uint64_t label_end_pos = compiler->ir->insts_count;
+  uint64_t label_end_pos = LOC_INST;
   ALTER_INST(label_start_pos - 1, MAKE_JMP_ABS(label_end_pos));
 }
 
@@ -515,7 +522,7 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
   PUSH_INST(MAKE_MOV(REG_FP));
 
   // str ra, #offset
-  uint64_t ra = compiler->ir->insts_count + 3;
+  uint64_t ra = LOC_INST + 3;
   PUSH_INST(MAKE_PUSH((Word){.as_u64 = ra}));
   PUSH_INST(MAKE_STR(REG_RA));
 

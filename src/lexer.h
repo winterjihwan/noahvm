@@ -6,6 +6,7 @@ typedef enum {
   Token_LParen,
   Token_RParen,
   Token_Identifier,
+  Token_Literal,
   Token_Number,
   Token_Float,
   Token_LBracket,
@@ -37,6 +38,7 @@ typedef enum {
   Token_Or,
   Token_Semicolon,
   Token_Colon,
+  Token_Quote,
   Token_EOF
 } Token_t;
 
