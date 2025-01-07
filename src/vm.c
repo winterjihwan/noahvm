@@ -51,6 +51,10 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "\teq";
   case INST_NE:
     return "\tne";
+  case INST_GT:
+    return "\tgt";
+  case INST_LT:
+    return "\tlt";
   case INST_PRINT:
     return "\tprint";
   case INST_NEGATE:
@@ -124,7 +128,19 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
         {
             .has_operand = 0,
         },
+    [INST_GT] =
+        {
+            .has_operand = 0,
+        },
+    [INST_LT] =
+        {
+            .has_operand = 0,
+        },
     [INST_PRINT] =
+        {
+            .has_operand = 0,
+        },
+    [INST_PRINTS] =
         {
             .has_operand = 0,
         },
@@ -372,8 +388,8 @@ void vm_execute(void) {
     case INST_EQ:
       assert(vm.stack_count > 1 && "Stack underflow");
 
-      word_one = vm.stack[vm.stack_count - 1];
       word_two = vm.stack[vm.stack_count - 2];
+      word_one = vm.stack[vm.stack_count - 1];
 
       uint64_t eq = 0;
       if (word_one.as_u64 == word_two.as_u64)
@@ -389,8 +405,8 @@ void vm_execute(void) {
     case INST_NE:
       assert(vm.stack_count > 1 && "Stack underflow");
 
-      word_one = vm.stack[vm.stack_count - 1];
       word_two = vm.stack[vm.stack_count - 2];
+      word_one = vm.stack[vm.stack_count - 1];
 
       uint64_t ne = 0;
       if (word_one.as_u64 != word_two.as_u64)
@@ -403,12 +419,52 @@ void vm_execute(void) {
 
       continue;
 
+    case INST_GT:
+      assert(vm.stack_count > 1 && "Stack underflow");
+
+      word_two = vm.stack[vm.stack_count - 2];
+      word_one = vm.stack[vm.stack_count - 1];
+
+      uint64_t gt = 0;
+      if (word_two.as_u64 > word_one.as_u64)
+        gt = 1;
+
+      vm.stack[vm.stack_count - 2] = (Word){.as_u64 = gt};
+
+      vm.stack_count -= 1;
+      SP_DECREMENT;
+
+      continue;
+
+    case INST_LT:
+      assert(vm.stack_count > 1 && "Stack underflow");
+
+      word_two = vm.stack[vm.stack_count - 2];
+      word_one = vm.stack[vm.stack_count - 1];
+
+      uint64_t lt = 0;
+      if (word_two.as_u64 < word_one.as_u64)
+        lt = 1;
+
+      vm.stack[vm.stack_count - 2] = (Word){.as_u64 = lt};
+
+      vm.stack_count -= 1;
+      SP_DECREMENT;
+
+      continue;
+
     case INST_PRINT:
       assert(vm.stack_count > 0 && "Stack underflow");
 
       word_one = vm.stack[vm.stack_count - 1];
-      printf("as_u64:\t%lld\n", word_one.as_u64);
-      printf("as_sv:\t%.*s\n", word_one.as_sv.len, word_one.as_sv.str);
+      printf("%lld\n", word_one.as_u64);
+      continue;
+
+    case INST_PRINTS:
+      assert(vm.stack_count > 0 && "Stack underflow");
+
+      word_one = vm.stack[vm.stack_count - 1];
+      printf("%.*s\n", word_one.as_sv.len, word_one.as_sv.str);
       continue;
 
     case INST_NEGATE:

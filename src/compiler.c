@@ -41,9 +41,17 @@ __attribute__((unused)) static void compiler_dump(const Compiler *compiler) {
 static Bp PRED_TABLE[Token_EOF + 1] = {
     [Token_EqualEqual] =
         {
-            .in_power = BP_IN_CMP,
+            .in_power = BP_IN_EQ_CMP,
         },
     [Token_ExcMarkEqual] =
+        {
+            .in_power = BP_IN_EQ_CMP,
+        },
+    [Token_GT] =
+        {
+            .in_power = BP_IN_CMP,
+        },
+    [Token_LT] =
         {
             .in_power = BP_IN_CMP,
         },
@@ -81,6 +89,10 @@ static Inst compiler_translate_op(const Token_t lhs_type, const Token_t type) {
     return MAKE_EQ;
   case Token_ExcMarkEqual:
     return MAKE_NE;
+  case Token_GT:
+    return MAKE_GT;
+  case Token_LT:
+    return MAKE_LT;
   case Token_Plus:
     return as_f ? MAKE_PLUSF : MAKE_PLUS;
   case Token_Minus:
