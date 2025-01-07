@@ -33,7 +33,7 @@ __attribute__((unused)) static void compiler_locals_dump(Compiler *compiler) {
   }
 }
 
-__attribute__((unused)) static void compiler_dump(Compiler *compiler) {
+__attribute__((unused)) static void compiler_dump(const Compiler *compiler) {
   printf("%.*s:\n", compiler->name.len, compiler->name.str);
   printf("\tdepth: %d\n", compiler->depth);
 }
@@ -66,14 +66,14 @@ static Bp PRED_TABLE[Token_EOF + 1] = {
         },
 };
 
-inline static int compiler_token_is_pre_op(Token_t type) {
+inline static int compiler_token_is_pre_op(const Token_t type) {
   if (type == Token_Minus)
     return 1;
 
   return 0;
 }
 
-static Inst compiler_translate_op(Token_t lhs_type, Token_t type) {
+static Inst compiler_translate_op(const Token_t lhs_type, const Token_t type) {
   int as_f = lhs_type == Token_Float ? 1 : 0;
 
   switch (type) {
@@ -95,13 +95,13 @@ static Inst compiler_translate_op(Token_t lhs_type, Token_t type) {
   };
 }
 
-inline static uint64_t compiler_sv_to_u64(char *str, int len) {
+inline static uint64_t compiler_sv_to_u64(const char *str, const int len) {
   char buf[len + 1];
   snprintf(buf, len + 1, "%.*s", len, str);
   return strtol(buf, NULL, 10);
 }
 
-inline static uint64_t compiler_sv_to_f64(char *str, int len) {
+inline static uint64_t compiler_sv_to_f64(const char *str, const int len) {
   char buf[len + 1];
   snprintf(buf, len + 1, "%.*s", len, str);
   return strtof(buf, NULL);
@@ -130,7 +130,7 @@ inline static uint64_t compiler_sv_to_f64(char *str, int len) {
     }                                                                          \
   } while (0)
 
-static int compiler_var_resolve(Compiler *compiler, Sv *name) {
+static int compiler_var_resolve(Compiler *compiler, const Sv *name) {
   for (int i = compiler->locals_count - 1; i >= 0; i--) {
     Local *local = &compiler->locals[i];
 
@@ -144,7 +144,7 @@ static int compiler_var_resolve(Compiler *compiler, Sv *name) {
   return -1;
 }
 
-static void compiler_emit_ir(Compiler *compiler, Token *lhs) {
+static void compiler_emit_ir(Compiler *compiler, const Token *lhs) {
   if (lhs->type == Token_Number) {
     Word operand = (Word){.as_u64 = compiler_sv_to_u64(lhs->start, lhs->len)};
 
@@ -168,9 +168,10 @@ static void compiler_emit_ir(Compiler *compiler, Token *lhs) {
   }
 }
 
-static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label);
+static void compiler_expr_call(Compiler *compiler, Token *tokens,
+                               const Sv label);
 static void compiler_expr_bp(Compiler *compiler, Token *tokens,
-                             uint8_t min_bp) {
+                             const uint8_t min_bp) {
   Token *lhs = NEXT_TOKEN;
 
   if (PEEK_TOKEN_TYPE == Token_LParen) {

@@ -15,6 +15,5 @@ o\\\_(")(")
 - Little bit of clean up
 - IP as register
 - Or, And operand
-- While inst
 - String support
 - compiler->ir->insts_count into macro?
