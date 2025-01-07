@@ -5,6 +5,8 @@
 #include "table.h"
 #include "vm.h"
 
+/*#define DEBUG*/
+
 Vm vm = {0};
 
 void vm_init(void) {
@@ -49,6 +51,8 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "\tdiv";
   case INST_EQ:
     return "\teq";
+  case INST_NE:
+    return "\tne";
   case INST_PRINT:
     return "\tprint";
   case INST_NEGATE:
@@ -63,10 +67,10 @@ char *vm_inst_t_to_str(Inst_t type) {
     return "\tvarl";
   case INST_JMP_ABS:
     return "\tjmpa";
-  case INST_JMP_EQ:
-    return "\tjmpeq";
-  case INST_JMP_NE:
-    return "\tjmpne";
+  case INST_JMP_T:
+    return "\tjmpt";
+  case INST_JMP_NT:
+    return "\tjmpnt";
   case INST_RET:
     return "\tret";
   case INST_LDR:
@@ -118,6 +122,10 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
         {
             .has_operand = 0,
         },
+    [INST_NE] =
+        {
+            .has_operand = 0,
+        },
     [INST_PRINT] =
         {
             .has_operand = 0,
@@ -151,12 +159,12 @@ static Inst_Context INST_CONTEXTS[INST_EOF + 1] = {
             .has_operand = 1,
             .operand_type = WORD_U64,
         },
-    [INST_JMP_EQ] =
+    [INST_JMP_T] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
         },
-    [INST_JMP_NE] =
+    [INST_JMP_NT] =
         {
             .has_operand = 1,
             .operand_type = WORD_U64,
@@ -258,7 +266,9 @@ void vm_program_dump(void) {
   printf("-----\n\n");
 }
 
-Word vm_env_resolve(const Sv label) { return *hash_table_get(&vm.env, label); }
+inline static Word vm_env_resolve(const Sv label) {
+  return *hash_table_get(&vm.env, label);
+}
 
 #ifndef DEBUG
 #define SP_INCREMENT vm.reg[REG_SP].as_u64++;
@@ -288,7 +298,7 @@ void vm_execute(void) {
   int n = 1;
 
 #ifdef DEBUG
-  n = 30;
+  n = 100;
 #endif
 
   while (n) {
@@ -379,6 +389,23 @@ void vm_execute(void) {
 
       continue;
 
+    case INST_NE:
+      assert(vm.stack_count > 1 && "Stack underflow");
+
+      word_one = vm.stack[vm.stack_count - 1];
+      word_two = vm.stack[vm.stack_count - 2];
+
+      uint64_t ne = 0;
+      if (word_one.as_u64 != word_two.as_u64)
+        ne = 1;
+
+      vm.stack[vm.stack_count - 2] = (Word){.as_u64 = ne};
+
+      vm.stack_count -= 1;
+      SP_DECREMENT;
+
+      continue;
+
     case INST_PRINT:
       assert(vm.stack_count > 0 && "Stack underflow");
 
@@ -445,7 +472,7 @@ void vm_execute(void) {
       vm.ip = jmp_offset;
       continue;
 
-    case INST_JMP_EQ:;
+    case INST_JMP_T:;
       assert(vm.stack_count > 0 && "Stack underflow");
 
       eq = vm.stack[vm.stack_count-- - 1].as_u64;
@@ -459,7 +486,7 @@ void vm_execute(void) {
 
       continue;
 
-    case INST_JMP_NE:;
+    case INST_JMP_NT:;
       assert(vm.stack_count > 0 && "Stack underflow");
 
       eq = vm.stack[vm.stack_count-- - 1].as_u64;

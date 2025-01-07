@@ -14,6 +14,7 @@ typedef enum {
   INST_MULT,
   INST_DIV,
   INST_EQ,
+  INST_NE,
   INST_PRINT,
   INST_NEGATE,
   INST_DEF_GLOBAL,
@@ -21,8 +22,8 @@ typedef enum {
   INST_VAR_GLOBAL,
   INST_VAR_LOCAL,
   INST_JMP_ABS,
-  INST_JMP_EQ,
-  INST_JMP_NE,
+  INST_JMP_T,
+  INST_JMP_NT,
   INST_RET,
   INST_LDR,
   INST_STR,
@@ -83,6 +84,8 @@ typedef struct {
   (Inst) { .type = INST_DIV }
 #define MAKE_EQ                                                                \
   (Inst) { .type = INST_EQ }
+#define MAKE_NE                                                                \
+  (Inst) { .type = INST_NE }
 #define MAKE_NEGATE                                                            \
   (Inst) { .type = INST_NEGATE }
 #define MAKE_DEF_GLOBAL(label)                                                 \
@@ -107,13 +110,13 @@ typedef struct {
   (Inst) {                                                                     \
     .type = INST_JMP_ABS, .operand = {.as_u64 = offset }                       \
   }
-#define MAKE_JMP_EQ(offset)                                                    \
+#define MAKE_JMP_T(offset)                                                     \
   (Inst) {                                                                     \
-    .type = INST_JMP_EQ, .operand = {.as_u64 = offset }                        \
+    .type = INST_JMP_T, .operand = {.as_u64 = offset }                         \
   }
-#define MAKE_JMP_NE(offset)                                                    \
+#define MAKE_JMP_NT(offset)                                                    \
   (Inst) {                                                                     \
-    .type = INST_JMP_NE, .operand = {.as_u64 = offset }                        \
+    .type = INST_JMP_NT, .operand = {.as_u64 = offset }                        \
   }
 #define MAKE_RET                                                               \
   (Inst) { .type = INST_RET }
@@ -141,7 +144,6 @@ void vm_destruct(void);
 void vm_program_load_from_memory(Inst *insts, size_t insts_count);
 void vm_execute(void);
 char *vm_inst_t_to_str(Inst_t type);
-Word vm_env_resolve(const Sv name);
 
 void vm_stack_dump(void);
 void vm_program_dump(void);

@@ -61,6 +61,5 @@ typedef struct {
 
 void compiler_init(Compiler *compiler);
 void compiler_compile(Compiler *compiler, Token *tokens);
-void compiler_dump(Compiler *compiler);
 
 #endif

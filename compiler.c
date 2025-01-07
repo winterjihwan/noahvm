@@ -33,13 +33,17 @@ __attribute__((unused)) static void compiler_locals_dump(Compiler *compiler) {
   }
 }
 
-void compiler_dump(Compiler *compiler) {
+__attribute__((unused)) static void compiler_dump(Compiler *compiler) {
   printf("%.*s:\n", compiler->name.len, compiler->name.str);
   printf("\tdepth: %d\n", compiler->depth);
 }
 
 static Bp PRED_TABLE[Token_EOF + 1] = {
     [Token_EqualEqual] =
+        {
+            .in_power = BP_IN_CMP,
+        },
+    [Token_ExcMarkEqual] =
         {
             .in_power = BP_IN_CMP,
         },
@@ -75,6 +79,8 @@ static Inst compiler_translate_op(Token_t lhs_type, Token_t type) {
   switch (type) {
   case Token_EqualEqual:
     return MAKE_EQ;
+  case Token_ExcMarkEqual:
+    return MAKE_NE;
   case Token_Plus:
     return as_f ? MAKE_PLUSF : MAKE_PLUS;
   case Token_Minus:
@@ -255,7 +261,8 @@ static void compiler_stmt_assign(Compiler *compiler, Token *tokens) {
 
   compiler_expr(compiler, tokens);
 
-  if (compiler->depth == 0) {
+  int offset = compiler_var_resolve(compiler, &name);
+  if (offset == -1) {
     PUSH_INST(MAKE_DEF_GLOBAL(name));
 
   } else {
@@ -311,20 +318,19 @@ static void compiler_stmt_block(Compiler *compiler, Token *tokens) {
 
 static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_If);
+
   MUNCH_TOKEN(Token_LParen);
-
   compiler_expr(compiler, tokens);
-
   MUNCH_TOKEN(Token_RParen);
 
-  PUSH_INST(MAKE_JMP_NE(-1));
+  PUSH_INST(MAKE_JMP_NT(-1));
   uint64_t then_start_pos = compiler->ir->insts_count;
 
   compiler_stmt_block(compiler, tokens);
 
   uint64_t then_end_pos = compiler->ir->insts_count;
 
-  ALTER_INST(then_start_pos - 1, MAKE_JMP_NE(then_end_pos + 1));
+  ALTER_INST(then_start_pos - 1, MAKE_JMP_NT(then_end_pos + 1));
   PUSH_INST(MAKE_JMP_ABS(then_end_pos + 1));
 
   if (PEEK_TOKEN_TYPE == Token_Else) {
@@ -335,6 +341,27 @@ static void compiler_stmt_if(Compiler *compiler, Token *tokens) {
     uint64_t else_end_pos = compiler->ir->insts_count;
     ALTER_INST(then_end_pos, MAKE_JMP_ABS(else_end_pos));
   }
+}
+
+static void compiler_stmt_while(Compiler *compiler, Token *tokens) {
+  MUNCH_TOKEN(Token_While);
+
+  MUNCH_TOKEN(Token_LParen);
+  uint64_t while_pred_start_pos = compiler->ir->insts_count;
+  compiler_expr(compiler, tokens);
+
+  printf("Then what is it? %.*s\n", *PEEK_TOKEN.len, *PEEK_TOKEN.start);
+
+  MUNCH_TOKEN(Token_RParen);
+
+  PUSH_INST(MAKE_JMP_NT(-1));
+  uint64_t while_start_pos = compiler->ir->insts_count;
+
+  compiler_stmt_block(compiler, tokens);
+  PUSH_INST(MAKE_JMP_ABS(while_pred_start_pos));
+
+  uint64_t while_end_pos = compiler->ir->insts_count;
+  ALTER_INST(while_start_pos - 1, MAKE_JMP_NT(while_end_pos));
 }
 
 static Compiler *compiler_call_new(Compiler *compiler, Sv name) {
@@ -421,8 +448,9 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
     PUSH_INST(MAKE_PUSH(null));
     PUSH_INST(MAKE_STR(REG_RAX));
     PUSH_INST(MAKE_RET);
+  } else {
+    RETURNED = 0;
   }
-  RETURNED = 0;
 
   compiler->locals_count -= arity;
   uint64_t label_end_pos = compiler->ir->insts_count;
@@ -547,6 +575,9 @@ static void compiler_stmt(Compiler *compiler, Token *tokens) {
 
   } else if (peek_type == Token_If) {
     compiler_stmt_if(compiler, tokens);
+
+  } else if (peek_type == Token_While) {
+    compiler_stmt_while(compiler, tokens);
 
   } else if (peek_type == Token_Print) {
     compiler_stmt_print(compiler, tokens);
