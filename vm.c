@@ -288,7 +288,7 @@ void vm_execute(void) {
   int n = 1;
 
 #ifdef DEBUG
-  n = 100;
+  n = 30;
 #endif
 
   while (n) {

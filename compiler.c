@@ -367,6 +367,7 @@ static void compiler_call_destruct(Compiler *compiler) {
   } while (0);
 #define FN_CURR &compiler->fn[compiler->fn_count - 1]
 
+static int RETURNED = 0;
 static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   // Pre
   MUNCH_TOKEN(Token_Fn);
@@ -415,6 +416,14 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   compiler_stmt_block(compiler, tokens);
 
   // Post
+  if (!RETURNED) {
+    Word null = {.as_u64 = 0};
+    PUSH_INST(MAKE_PUSH(null));
+    PUSH_INST(MAKE_STR(REG_RAX));
+    PUSH_INST(MAKE_RET);
+  }
+  RETURNED = 0;
+
   compiler->locals_count -= arity;
   uint64_t label_end_pos = compiler->ir->insts_count;
   ALTER_INST(label_start_pos - 1, MAKE_JMP_ABS(label_end_pos));
@@ -509,6 +518,8 @@ static void compiler_expr_call(Compiler *compiler, Token *tokens, Sv label) {
 
 static void compiler_stmt_return(Compiler *compiler, Token *tokens) {
   MUNCH_TOKEN(Token_Return);
+
+  RETURNED = 1;
 
   if (PEEK_TOKEN_TYPE == Token_Semicolon) {
     Word null = {.as_u64 = 0};
