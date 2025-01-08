@@ -10,11 +10,3 @@ $ ./main
 (\\\(\\\
 ( -.-)  
 o\\\_(")(")
-
-- Err handling using VA_ARGS
-- Or, And operand
-
-- Type checking
-- Dead code elimination
-- LVN
-- |>

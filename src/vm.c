@@ -5,8 +5,6 @@
 #include "table.h"
 #include "vm.h"
 
-/*#define DEBUG*/
-
 Vm vm = {0};
 
 void vm_init(void) {
@@ -24,7 +22,7 @@ void vm_init(void) {
 void vm_destruct(void) { hash_table_destruct(&vm.env); }
 
 void vm_program_load_from_memory(Inst *insts, size_t insts_count) {
-  assert(insts_count < PROGRAM_STACK_CAP);
+  assert(insts_count < INSTS_CAP);
 
   for (size_t i = 0; i < insts_count; i++) {
     vm.program[i] = insts[i];

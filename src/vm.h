@@ -5,6 +5,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// TODO: Err handle
+typedef enum {
+  VM_STACK_OVERFLOW,
+  VM_STACK_UNDERFLOW,
+} Err;
+
 typedef enum {
   INST_PUSH,
   INST_POP,
@@ -46,12 +52,12 @@ typedef struct {
 } Inst_Context;
 
 #define VM_STACK_CAP 512
-#define PROGRAM_STACK_CAP 128
+#define INSTS_CAP 256
 
 typedef uint64_t Addr;
 
 typedef struct {
-  Inst program[PROGRAM_STACK_CAP];
+  Inst program[INSTS_CAP];
   uint64_t program_size;
 
   Word stack[VM_STACK_CAP];

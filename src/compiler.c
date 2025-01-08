@@ -423,7 +423,6 @@ static void compiler_call_destruct(Compiler *compiler) {
 
 static int RETURNED = 0;
 static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
-  // Pre
   MUNCH_TOKEN(Token_Fn);
 
   EXPECT_TOKEN(Token_Identifier);
@@ -470,7 +469,7 @@ static void compiler_stmt_fn(Compiler *compiler, Token *tokens) {
   // Mid
   compiler_stmt_block(compiler, tokens);
 
-  // Post
+  // Post call
   if (!RETURNED) {
     Word null = {.as_u64 = 0};
     PUSH_INST(MAKE_PUSH(null));

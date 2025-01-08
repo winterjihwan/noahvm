@@ -2,15 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analyzer.h"
 #include "compiler.h"
 #include "lexer.h"
 #include "vm.h"
 
 #define CODE_CAP 1024
 
-inline static void null_terminate(char *str) { str[strlen(str) - 1] = '\0'; }
-
 static void load_code_from_file(const char *file_path, char *buf) {
+#define NULL_TERMINATE(str)                                                    \
+  do {                                                                         \
+    str[strlen(str) - 1] = '\0';                                               \
+  } while (0)
+
   FILE *file = fopen(file_path, "rb");
 
   if (fseek(file, 0, SEEK_END) < 0) {
@@ -35,7 +39,7 @@ static void load_code_from_file(const char *file_path, char *buf) {
     goto close;
   }
 
-  null_terminate(buf);
+  NULL_TERMINATE(buf);
 
   fclose(file);
   return;
@@ -43,10 +47,12 @@ static void load_code_from_file(const char *file_path, char *buf) {
 close:
   if (file)
     fclose(file);
+#undef NULL_TERMINATE
 }
 
 extern Lexer lexer;
 extern Compiler compiler;
+extern Analyzer analyzer;
 extern Vm vm;
 
 int main(int argc, char **argv) {
@@ -69,6 +75,8 @@ int main(int argc, char **argv) {
   Compiler compiler;
   compiler_init(&compiler);
   compiler_compile(&compiler, lexer.tokens);
+
+  analyzer_analyze_basic_blocks(compiler.ir->insts);
 
   vm_init();
   vm_program_load_from_memory(compiler.ir->insts, compiler.ir->insts_count);

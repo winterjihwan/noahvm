@@ -11,11 +11,9 @@
 #define FN_CAP 255
 
 typedef struct {
-  Inst insts[PROGRAM_STACK_CAP];
+  Inst insts[INSTS_CAP];
   uint64_t insts_count;
 } Ir;
-
-typedef struct Compiler Compiler;
 
 typedef struct {
   Sv name;
@@ -29,6 +27,7 @@ typedef struct {
   uint8_t arity;
 } Fn;
 
+typedef struct Compiler Compiler;
 struct Compiler {
   Compiler *enclosing;
 
