@@ -88,7 +88,7 @@ static void analyzer_dse_local(Basic_block *block) {
       return;
     }
 
-    if (next_inst->type == INST_DEFG || next_inst->type == INST_DEFL) {
+    if (next_inst->type == INST_DEFG) {
       Sv name = next_inst->operand.as_sv;
       Word *maybe_used = hash_table_get(&dse, name);
       if (maybe_used && maybe_used->as_u64 == next_inst->type) {
@@ -99,11 +99,13 @@ static void analyzer_dse_local(Basic_block *block) {
       hash_table_insert(&dse, name, (Word){.as_u64 = next_inst->type});
     }
 
-    if (next_inst->type == INST_VARG || next_inst->type == INST_VARL) {
+    if (next_inst->type == INST_VARG) {
       Sv name = next_inst->operand.as_sv;
       hash_table_delete(&dse, name);
     }
   }
+
+  hash_table_destruct(&dse);
 }
 
 void analyzer_analyze_dse(void) {

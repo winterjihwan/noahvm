@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define HASH_TABLE_CAP 256
+#define HASH_TABLE_CAP 64
 
 typedef struct Bucket Bucket;
 typedef uint64_t HashKey;

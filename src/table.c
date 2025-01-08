@@ -97,7 +97,7 @@ merge:
 
 void hash_table_delete(Hash_Table *ht, const Sv key_str) {
   HashKey key = hash_table_key_hash(key_str);
-  HashKey key_mod = key % HASH_TABLE_CAP;
+  HashKey key_mod = key % 16;
 
   Bucket *bucket = ht->nodes[key_mod];
 
