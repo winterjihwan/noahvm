@@ -7,7 +7,7 @@
 
 Analyzer analyzer = {0};
 
-void analyzer_ir_load(Inst *insts) { analyzer.ir = insts; }
+void analyzer_ir_load(const Inst *insts) { analyzer.ir = insts; }
 
 __attribute__((unused)) static void analyzer_basic_blocks_dump(void) {
   printf("Basic blocks: \n");
@@ -42,7 +42,7 @@ static void analyzer_basic_blocks_dismember(void) {
 
     uint8_t block_len = 1;
     while (1) {
-      Inst *next_inst = NEXT_INST;
+      const Inst *next_inst = NEXT_INST;
 
       if (next_inst->type == INST_EOF) {
         block.len = block_len;
@@ -82,7 +82,7 @@ static void analyzer_dse_local(Basic_block *block) {
   size_t insts_pos = block->start;
 
   while (insts_pos < block->start + block->len) {
-    Inst *next_inst = NEXT_INST;
+    const Inst *next_inst = NEXT_INST;
 
     if (next_inst->type == INST_EOF) {
       return;

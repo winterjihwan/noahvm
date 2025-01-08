@@ -11,13 +11,13 @@ typedef struct {
 } Basic_block;
 
 typedef struct {
-  Inst *ir;
+  const Inst *ir;
 
   Basic_block blocks[INSTS_CAP];
   uint64_t blocks_count;
 } Analyzer;
 
-void analyzer_ir_load(Inst *insts);
+void analyzer_ir_load(const Inst *insts);
 void analyzer_analyze_dse(void);
 
 #endif

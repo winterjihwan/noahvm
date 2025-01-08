@@ -108,9 +108,10 @@ void hash_table_delete(Hash_Table *ht, const Sv key_str) {
     if (bucket->prev != NULL) {
       Bucket *prev = bucket->prev;
       free(bucket);
-      bucket = prev;
+      ht->nodes[key_mod] = prev;
     } else {
       free(bucket);
+      ht->nodes[key_mod] = NULL;
     }
 
     hash_table_keys_delete(ht, key);
@@ -132,6 +133,7 @@ void hash_table_delete(Hash_Table *ht, const Sv key_str) {
       free(t);
     } else {
       free(bucket->prev);
+      ht->nodes[key_mod]->prev = NULL;
     }
 
     hash_table_keys_delete(ht, key);
