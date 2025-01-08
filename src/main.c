@@ -66,21 +66,23 @@ int main(int argc, char **argv) {
   char code[CODE_CAP] = {0};
   load_code_from_file(code_path, code);
 
-  printf("Code: \n%s\n\n", code);
+  /*printf("Code: \n%s\n\n", code);*/
 
   lexer_init_with_code(code);
   lexer_lex();
-  lexer_tokens_dump(lexer.tokens);
+  /*lexer_tokens_dump(lexer.tokens);*/
 
   Compiler compiler;
   compiler_init(&compiler);
   compiler_compile(&compiler, lexer.tokens);
 
-  analyzer_analyze_basic_blocks(compiler.ir->insts);
+  analyzer_ir_load(compiler.ir->insts);
+  analyzer_basic_blocks_dismember();
+  analyzer_basic_blocks_dump();
 
   vm_init();
   vm_program_load_from_memory(compiler.ir->insts, compiler.ir->insts_count);
-  vm_program_dump();
+  /*vm_program_dump();*/
   vm_execute();
   vm_stack_dump();
   vm_destruct();

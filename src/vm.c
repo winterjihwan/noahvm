@@ -238,7 +238,7 @@ __attribute__((unused)) static char *vm_word_reg_translate(uint64_t reg_no) {
   }
 }
 
-static void vm_inst_dump(const Inst *inst) {
+void vm_inst_dump(const Inst *inst) {
   printf("%s ", vm_inst_t_to_str(inst->type));
   if (INST_CONTEXTS[inst->type].has_operand) {
     switch (INST_CONTEXTS[inst->type].operand_type) {

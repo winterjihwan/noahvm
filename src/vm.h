@@ -157,6 +157,7 @@ void vm_program_load_from_memory(Inst *insts, size_t insts_count);
 void vm_execute(void);
 char *vm_inst_t_to_str(Inst_t type);
 
+void vm_inst_dump(const Inst *inst);
 void vm_stack_dump(void);
 void vm_program_dump(void);
 

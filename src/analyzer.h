@@ -11,10 +11,16 @@ typedef struct {
 } Basic_block;
 
 typedef struct {
+  Inst *ir;
+
   Basic_block blocks[INSTS_CAP];
   uint64_t blocks_count;
 } Analyzer;
 
-void analyzer_analyze_basic_blocks(Inst *insts);
+void analyzer_ir_load(Inst *insts);
+void analyzer_dead_store_elimination(void);
+void analyzer_basic_blocks_dismember(void);
+
+void analyzer_basic_blocks_dump(void);
 
 #endif
