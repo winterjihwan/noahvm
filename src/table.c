@@ -48,7 +48,7 @@ Word *hash_table_get(Hash_Table *ht, const Sv key_str) {
 
   Bucket *bucket = ht->nodes[key_mod];
   if (bucket == NULL)
-    goto not_found;
+    return NULL;
 
   if (bucket->key == key) {
     return &bucket->data;
@@ -56,7 +56,7 @@ Word *hash_table_get(Hash_Table *ht, const Sv key_str) {
 
   while (1) {
     if (bucket->prev == NULL)
-      goto not_found;
+      return NULL;
 
     if (bucket->prev->key != key) {
       bucket = bucket->prev;
@@ -65,11 +65,6 @@ Word *hash_table_get(Hash_Table *ht, const Sv key_str) {
 
     return &bucket->prev->data;
   }
-
-not_found:
-  fprintf(stderr, "HT: Value not found for key %.*s\n", key_str.len,
-          key_str.str);
-  exit(1);
 }
 
 int hash_table_keys_contains(Hash_Table *ht, Sv key_str) {
@@ -107,13 +102,13 @@ void hash_table_delete(Hash_Table *ht, const Sv key_str) {
   Bucket *bucket = ht->nodes[key_mod];
 
   if (bucket == NULL)
-    goto not_found;
+    return;
 
   if (bucket->key == key) {
     if (bucket->prev != NULL) {
-      Bucket *t = bucket;
-      *bucket = *bucket->prev;
-      free(t);
+      Bucket *prev = bucket->prev;
+      free(bucket);
+      bucket = prev;
     } else {
       free(bucket);
     }
@@ -124,7 +119,7 @@ void hash_table_delete(Hash_Table *ht, const Sv key_str) {
 
   while (1) {
     if (bucket->prev == NULL)
-      goto not_found;
+      return;
 
     if (bucket->prev->key != key) {
       bucket = bucket->prev;
@@ -142,11 +137,6 @@ void hash_table_delete(Hash_Table *ht, const Sv key_str) {
     hash_table_keys_delete(ht, key);
     return;
   }
-
-not_found:
-  fprintf(stderr, "HT: Value not found for key %.*s\n", key_str.len,
-          key_str.str);
-  exit(2);
 }
 
 void hash_table_destruct(Hash_Table *ht) {

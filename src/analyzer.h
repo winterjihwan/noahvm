@@ -18,9 +18,6 @@ typedef struct {
 } Analyzer;
 
 void analyzer_ir_load(Inst *insts);
-void analyzer_dead_store_elimination(void);
-void analyzer_basic_blocks_dismember(void);
-
-void analyzer_basic_blocks_dump(void);
+void analyzer_analyze_dse(void);
 
 #endif

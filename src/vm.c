@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "table.h"
 #include "vm.h"
@@ -281,6 +282,12 @@ void vm_program_dump(void) {
 }
 
 inline static Word vm_env_resolve(const Sv label) {
+  Word *data = hash_table_get(&vm.env, label);
+  if (data == NULL) {
+    fprintf(stderr, "Undefined global variable %.*s", label.len, label.str);
+    exit(12);
+  }
+
   return *hash_table_get(&vm.env, label);
 }
 

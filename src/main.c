@@ -77,8 +77,7 @@ int main(int argc, char **argv) {
   compiler_compile(&compiler, lexer.tokens);
 
   analyzer_ir_load(compiler.ir->insts);
-  analyzer_basic_blocks_dismember();
-  analyzer_basic_blocks_dump();
+  analyzer_analyze_dse();
 
   vm_init();
   vm_program_load_from_memory(compiler.ir->insts, compiler.ir->insts_count);
