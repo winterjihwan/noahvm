@@ -1,6 +1,7 @@
 # No All Hope
 
-Level up from hopeless segfaults
+Virtal machine for sort of like C Language
+Simulates CPU hardware but fully stack based
 
 ```bash
 $ make main

@@ -39,8 +39,8 @@ static void analyzer_basic_blocks_dismember(void) {
         .start = insts_pos,
         .len = 0,
     };
-
     uint8_t block_len = 1;
+
     while (1) {
       const Inst *next_inst = NEXT_INST;
 
@@ -63,19 +63,6 @@ static void analyzer_basic_blocks_dismember(void) {
 
 #undef BLOCKS_PUSH
 #undef BLOCKS_IS_END
-
-// push 3
-// defg a
-// pop
-// push 4
-// defg a
-// pop
-// varg a
-// print
-// pop
-// push 0
-// str rax
-// ret
 
 static void analyzer_dse_local(Basic_block *block) {
   Hash_Table dse = hash_table_new();
