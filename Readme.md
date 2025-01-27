@@ -1,4 +1,4 @@
-# No All Hope
+# Noah VM
 
 Virtal machine for sort of like C Language
 Simulates CPU hardware but fully stack based
