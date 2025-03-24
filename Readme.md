@@ -54,3 +54,13 @@ Noah VM은 가상머신의 작동 원리를 깊이 이해하고자 직접 설계
 **Engineering a Compiler** (3rd ed.) by Keith D. Cooper & Linda Torczon
 
 [bm - tsoding](https://github.com/tsoding/bm)
+
+<br />
+
+## 📦 사용법
+
+```bash
+make main
+./main ./examples/scope
+# 또는 ./examples/ 안의 다른 예제 사용 가능
+```
