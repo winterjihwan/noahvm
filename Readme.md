@@ -16,15 +16,15 @@ Noah VM은 가상머신의 작동 원리를 깊이 이해하고자 직접 설계
 
 ### C
 
-<div>
-</div>
+### LLDB
 
-### Infra
-
-## 🤔 기술적 이슈와 해결 과정
+## 🤔 트러블슈팅
 
 - ABA 문제
 
 <br />
 
-## 💁‍♂️ 프로젝트 팀원
+## ⚙ 참고자료
+
+**Engineering a Compiler** (3rd ed.) by Keith D. Cooper & Linda Torczon
+[bm - tsoding](https://github.com/tsoding/bm)
